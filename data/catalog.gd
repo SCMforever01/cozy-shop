@@ -23,7 +23,9 @@ static func get_recipe_by_id(id: String) -> Recipe:
 static func get_weather() -> Dictionary:
 	return {
 		"sunny": _make_weather("sunny", "晴", 1.0, 1.0, 0.0),
+		"overcast": _make_weather("overcast", "阴", 0.85, 1.0, -8.0),
 		"rain": _make_weather("rain", "雨", 0.55, 1.5, -15.0),
+		"storm": _make_weather("storm", "暴雨", 0.30, 1.8, -25.0),
 	}
 
 

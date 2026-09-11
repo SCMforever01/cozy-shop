@@ -79,7 +79,7 @@ func _subscribe_events() -> void:
 
 
 func _on_weather_changed(weather_id: String) -> void:
-	if weather_id == "rain":
+	if weather_id == "rain" or weather_id == "storm":
 		_spawn_rain()
 	else:
 		_rain.clear()
@@ -422,7 +422,7 @@ func _state_text(s: String) -> String:
 
 
 func _weather_text() -> String:
-	return "晴" if GameState.weather_id == "sunny" else "雨"
+	return Catalog.get_weather()[GameState.weather_id].display_name
 
 
 func _regular_status() -> String:
