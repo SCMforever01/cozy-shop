@@ -16,6 +16,8 @@ var shop: Dictionary = {
 
 # 当前天气 id（对应 data/catalog.gd 的定义）
 var weather_id: String = "sunny"
+# 明日天气预报（由 WeatherSystem 每天滚动）
+var forecast_weather_id: String = ""
 # 天气对各项机制的系数（由 WeatherSystem 每天写入）
 var weather_modifiers: Dictionary = {
 	"traffic": 1.0,       # 客流系数

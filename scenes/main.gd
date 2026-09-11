@@ -82,10 +82,14 @@ func _subscribe_events() -> void:
 
 
 func _on_weather_changed(weather_id: String) -> void:
-	if weather_id == "rain" or weather_id == "storm":
+	if weather_id == "rain" or weather_id == "storm" or weather_id == "typhoon":
 		_spawn_rain()
 	else:
 		_rain.clear()
+	if weather_id == "typhoon":
+		_spawn_floater("台风来袭！建议歇业", Color(0.9, 0.4, 0.4))
+	elif weather_id == "storm":
+		_spawn_floater("暴雨来袭", Color(0.5, 0.6, 0.9))
 
 
 func _on_customer_entered(p) -> void:
@@ -172,8 +176,11 @@ func _draw_sun() -> void:
 
 func _draw_hud() -> void:
 	draw_rect(Rect2(0, 0, W, HUD_H), Color(0.17, 0.17, 0.23))
-	var line := "第%d天  8:%02d  天气:%s  ¥%d  %s" % [
-		GameClock.day, GameClock.game_minute, _weather_text(),
+	var forecast := ""
+	if GameState.forecast_weather_id != "":
+		forecast = " 明日:%s" % Catalog.get_weather()[GameState.forecast_weather_id].display_name
+	var line := "第%d天  8:%02d  天气:%s%s  ¥%d  %s" % [
+		GameClock.day, GameClock.game_minute, _weather_text(), forecast,
 		GameState.shop["money"], _state_text(GameState.shop["day_state"]),
 	]
 	draw_string(_font, Vector2(16, 36), line, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color.WHITE)
