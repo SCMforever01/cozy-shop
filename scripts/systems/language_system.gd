@@ -1,19 +1,27 @@
 class_name LanguageSystem
 extends System
 ## 语言系统：中英切换。中文为默认（源文本），英文走翻译表。
+## 注意：Godot 翻译有「en」兜底 locale，需额外加一个中文恒等翻译，
+## 否则 locale 为 zh 时也会回退到英文。
 
 
 var _is_en: bool = false
-var _translation: Translation
 
 
 func setup() -> void:
-	_translation = Translation.new()
-	_translation.locale = "en"
 	var en := Translations.get_en()
+	# 中文恒等翻译（中文 -> 中文），避免回退到英文兜底
+	var zh := Translation.new()
+	zh.locale = "zh"
 	for k in en:
-		_translation.add_message(k, en[k])
-	TranslationServer.add_translation(_translation)
+		zh.add_message(k, k)
+	TranslationServer.add_translation(zh)
+	# 英文翻译
+	var en_trans := Translation.new()
+	en_trans.locale = "en"
+	for k in en:
+		en_trans.add_message(k, en[k])
+	TranslationServer.add_translation(en_trans)
 	TranslationServer.set_locale("zh")
 
 
