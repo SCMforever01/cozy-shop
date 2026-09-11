@@ -8,11 +8,13 @@ const CRITIC_PROB := 0.30
 const RUSH_PROB := 0.35
 const INSPECT_PROB := 0.25
 const BREAK_PROB := 0.20
+const HOLIDAY_PROB := 0.15
 
 var _critic_minute := -1
 var _rush_minute := -1
 var _inspect_minute := -1
 var _break_minute := -1
+var _holiday_minute := -1
 
 
 func setup() -> void:
@@ -30,6 +32,7 @@ func _on_day_started(_day) -> void:
 	_rush_minute = -1
 	_inspect_minute = -1
 	_break_minute = -1
+	_holiday_minute = -1
 	if randf() < CRITIC_PROB:
 		_critic_minute = randi_range(8, 35)
 	if randf() < RUSH_PROB:
@@ -38,6 +41,8 @@ func _on_day_started(_day) -> void:
 		_inspect_minute = randi_range(20, 50)
 	if randf() < BREAK_PROB:
 		_break_minute = randi_range(20, 45)
+	if randf() < HOLIDAY_PROB:
+		_holiday_minute = randi_range(5, 30)
 
 
 func _on_tick(minute) -> void:
@@ -55,6 +60,8 @@ func _on_tick(minute) -> void:
 		_check_inspection()
 	if minute == _break_minute:
 		_break_equipment()
+	if minute == _holiday_minute:
+		_trigger_holiday()
 
 
 func _check_inspection() -> void:
@@ -72,3 +79,8 @@ func _check_inspection() -> void:
 func _break_equipment() -> void:
 	GameState.equipment_broken_ticks = 3
 	EventBus.emit("event.equipment_failure")
+
+
+func _trigger_holiday() -> void:
+	GameState.shop["holiday"] = true
+	EventBus.emit("event.holiday")

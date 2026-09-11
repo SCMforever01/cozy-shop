@@ -192,6 +192,8 @@ func serve(customer_id: int) -> void:
 	var price_mult: float = 1.0 + GameState.shop["upgrades"]["ingredient"] * 0.15
 	if recipe.season == GameState.current_season:
 		price_mult *= 1.5  # 应季加价 50%
+	if GameState.shop["holiday"]:
+		price_mult *= 1.3  # 节日促销加价 30%
 	var earned: int = int((recipe.price + tip) * price_mult)
 	GameState.shop["money"] += earned
 	if c.get("is_critic", false):

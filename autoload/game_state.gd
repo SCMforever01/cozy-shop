@@ -14,6 +14,7 @@ var shop: Dictionary = {
 	"day_state": "preparing",  # preparing / serving / closed
 	"upgrades": {"mop": 0, "ingredient": 0, "decor": 0},  # 设备等级 0~3
 	"ingredients": 0,  # 当前食材库存（当天用不完过期）
+	"holiday": false,  # 节日促销（当天菜品加价）
 }
 
 # 当前天气 id（对应 data/catalog.gd 的定义）
@@ -48,6 +49,14 @@ var regulars: Array = [
 		"id": "xiaowang",
 		"name": "小王",
 		"favorite": "coffee",
+		"relationship": 0,
+		"visits": 0,
+		"lost": false,
+	},
+	{
+		"id": "lijie",
+		"name": "李姐",
+		"favorite": "cake",
 		"relationship": 0,
 		"visits": 0,
 		"lost": false,

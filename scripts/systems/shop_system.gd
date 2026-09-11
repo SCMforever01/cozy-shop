@@ -20,6 +20,7 @@ func _on_day_started(_day) -> void:
 	GameState.shop["day_state"] = "preparing"
 	GameState.shop["hygiene"] = 100.0
 	GameState.shop["ingredients"] = 0
+	GameState.shop["holiday"] = false
 	_day_start_money = GameState.shop["money"]
 
 

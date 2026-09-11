@@ -10,8 +10,12 @@ static func get_recipes() -> Array:
 		_make_recipe("juice", "果汁", ["切水果", "榨汁"], 8, 0, "summer"),
 		_make_recipe("coffee", "咖啡", ["研磨", "冲泡"], 12, 0, "winter"),
 		_make_recipe("sandwich", "三明治", ["切面包", "夹料", "装盘"], 15, 5, "spring"),
+		_make_recipe("salad", "沙拉", ["洗菜", "切菜", "拌酱"], 14, 8, "spring"),
 		_make_recipe("burger", "汉堡", ["烤面包", "煎肉", "夹料"], 18, 10, "autumn"),
 		_make_recipe("cake", "蛋糕", ["打面糊", "烘焙", "裱花"], 20, 15, "spring"),
+		_make_recipe("soup", "热汤", ["切菜", "炖煮", "调味"], 24, 18, "winter"),
+		_make_recipe("ice_cream", "冰淇淋", ["挖球", "淋酱", "装杯"], 22, 22, "summer"),
+		_make_recipe("pizza", "披萨", ["揉面", "铺料", "烘烤"], 28, 28, "autumn"),
 	]
 
 

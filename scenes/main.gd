@@ -54,6 +54,10 @@ const DISH_COLORS := {
 	"juice": Color(1.00, 0.60, 0.20),
 	"burger": Color(0.60, 0.38, 0.18),
 	"cake": Color(0.95, 0.62, 0.75),
+	"salad": Color(0.50, 0.80, 0.40),
+	"soup": Color(0.90, 0.60, 0.30),
+	"ice_cream": Color(0.95, 0.85, 0.90),
+	"pizza": Color(0.85, 0.50, 0.30),
 }
 const CUSTOMER_COLORS := [
 	Color(0.45, 0.70, 0.90),
@@ -113,6 +117,7 @@ func _subscribe_events() -> void:
 	EventBus.subscribe("event.inspect_fail", func(p): _spawn_floater(tr("卫生检查不合格！罚款¥%d") % p["fine"], Color(0.9, 0.3, 0.3)))
 	EventBus.subscribe("event.inspect_pass", func(_p): _spawn_floater(tr("卫生检查合格 ✓"), Color(0.3, 0.8, 0.4)))
 	EventBus.subscribe("event.equipment_failure", func(_p): _spawn_floater(tr("设备故障！暂时不能做菜"), Color(0.6, 0.5, 0.5)))
+	EventBus.subscribe("event.holiday", func(_p): _spawn_floater(tr("节日促销！今日菜品加价30%"), Color(1.0, 0.75, 0.3)))
 	EventBus.subscribe("regular.celebrate", func(p): _spawn_floater(tr("%s今天生日，特别开心！") % tr(p["name"]), Color(1.0, 0.6, 0.8)))
 	EventBus.subscribe("regular.gift", func(p): _spawn_floater(tr("%s送你一份礼物(+¥50)！") % tr(p["name"]), Color(1.0, 0.8, 0.4)))
 	EventBus.subscribe("regular.brings_friend", func(p): _spawn_floater(tr("%s介绍了个朋友来！") % tr(p["name"]), Color(0.6, 0.9, 0.6)))
