@@ -63,7 +63,7 @@ func _try_spawn() -> void:
 			prob = 0.03
 		if randf() < prob:
 			_spawned_today[r["id"]] = true
-			_spawn_customer(Catalog.get_recipe_by_id(r["favorite"]), r["name"], r["id"])
+			_spawn_customer(Catalog.get_recipe_by_id(r["favorite"]), r["name"], r["id"], randf() < 0.15)
 
 
 func _random_recipe() -> Recipe:
@@ -71,7 +71,7 @@ func _random_recipe() -> Recipe:
 	return recipes[randi() % recipes.size()]
 
 
-func _spawn_customer(recipe: Recipe, name: String, regular_id: String) -> void:
+func _spawn_customer(recipe: Recipe, name: String, regular_id: String, celebrating: bool = false) -> void:
 	var patience_base: float = 140.0 if regular_id != "" else 100.0
 	var customer: Dictionary = {
 		"id": _next_id,
@@ -84,10 +84,11 @@ func _spawn_customer(recipe: Recipe, name: String, regular_id: String) -> void:
 		"make_progress": 0,
 		"regular_id": regular_id,
 		"is_critic": false,
+		"celebrating": celebrating,
 	}
 	_next_id += 1
 	GameState.customers.append(customer)
-	EventBus.emit("customer.entered", {"name": name, "recipe_name": recipe.display_name})
+	EventBus.emit("customer.entered", {"name": name, "recipe_name": recipe.display_name, "celebrating": celebrating})
 
 
 func _on_food_critic(_p) -> void:
@@ -193,11 +194,23 @@ func serve(customer_id: int) -> void:
 		var r: Dictionary = _find_regular(c["regular_id"])
 		if not r.is_empty():
 			r["visits"] += 1
+			var prev_rel: int = r["relationship"]
 			if satisfaction >= 0.6:
 				r["relationship"] += 1
+			if c.get("celebrating", false):
+				r["relationship"] += 1
+				EventBus.emit("regular.celebrate", {"name": r["name"]})
 			r["relationship"] = clampi(r["relationship"], -3, 5)
 			if r["lost"]:
 				r["lost"] = false
+			# 里程碑送礼
+			if prev_rel < 3 and r["relationship"] >= 3:
+				GameState.shop["money"] += 50
+				EventBus.emit("regular.gift", {"name": r["name"]})
+			# 口碑传播：带朋友
+			if satisfaction >= 0.8 and randf() < 0.3:
+				_spawn_customer(_random_recipe(), "客人", "")
+				EventBus.emit("regular.brings_friend", {"name": r["name"]})
 
 	GameState.customers.erase(c)
 	EventBus.emit("customer.served", {"name": c["name"], "earned": earned})

@@ -79,6 +79,9 @@ func _subscribe_events() -> void:
 	EventBus.subscribe("event.inspect_fail", func(p): _spawn_floater("卫生检查不合格！罚款¥%d" % p["fine"], Color(0.9, 0.3, 0.3)))
 	EventBus.subscribe("event.inspect_pass", func(_p): _spawn_floater("卫生检查合格 ✓", Color(0.3, 0.8, 0.4)))
 	EventBus.subscribe("event.equipment_failure", func(_p): _spawn_floater("设备故障！暂时不能做菜", Color(0.6, 0.5, 0.5)))
+	EventBus.subscribe("regular.celebrate", func(p): _spawn_floater("%s今天生日，特别开心！" % p["name"], Color(1.0, 0.6, 0.8)))
+	EventBus.subscribe("regular.gift", func(p): _spawn_floater("%s送你一份礼物(+¥50)！" % p["name"], Color(1.0, 0.8, 0.4)))
+	EventBus.subscribe("regular.brings_friend", func(p): _spawn_floater("%s介绍了个朋友来！" % p["name"], Color(0.6, 0.9, 0.6)))
 
 
 func _on_weather_changed(weather_id: String) -> void:
@@ -94,7 +97,10 @@ func _on_weather_changed(weather_id: String) -> void:
 
 func _on_customer_entered(p) -> void:
 	if p["name"] != "客人" and p["name"] != "美食评论家":
-		_spawn_floater("%s来了！" % p["name"], Color(1.0, 0.85, 0.4))
+		if p.get("celebrating", false):
+			_spawn_floater("%s今天生日！" % p["name"], Color(1.0, 0.6, 0.8))
+		else:
+			_spawn_floater("%s来了！" % p["name"], Color(1.0, 0.85, 0.4))
 
 
 func _on_day_summary(summary: Dictionary) -> void:
@@ -234,6 +240,15 @@ func _draw_customer(c: Dictionary, pos: Vector2, idx: int) -> void:
 		draw_arc(pos + Vector2(0, 4), 10 * scale, PI + 0.15, TAU - 0.15, 12, Color(0.1, 0.1, 0.1), 2.0)
 	else:
 		draw_arc(pos + Vector2(0, 12), 10 * scale, 0.15, PI - 0.15, 12, Color(0.1, 0.1, 0.1), 2.0)
+
+	# 生日帽
+	if c.get("celebrating", false):
+		draw_colored_polygon(PackedVector2Array([
+			pos + Vector2(0, -radius - 8),
+			pos + Vector2(-14, -radius + 6),
+			pos + Vector2(14, -radius + 6),
+		]), Color(0.9, 0.3, 0.55))
+		draw_circle(pos + Vector2(0, -radius - 10), 4, Color(1.0, 0.9, 0.3))
 
 	# 名牌（熟客 / 评论家）
 	if c["regular_id"] != "" or c.get("is_critic", false):
