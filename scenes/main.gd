@@ -24,6 +24,9 @@ const HUD_H := 64.0
 var _open_rect := Rect2(40, H - 68, 150, 48)
 var _mop_rect := Rect2(210, H - 68, 150, 48)
 var _close_rect := Rect2(380, H - 68, 150, 48)
+var _upgrade_mop_rect := Rect2(40, H - 132, 230, 44)
+var _upgrade_ingredient_rect := Rect2(290, H - 132, 230, 44)
+var _upgrade_decor_rect := Rect2(540, H - 132, 230, 44)
 
 const DISH_COLORS := {
 	"milk_tea": Color(0.75, 0.55, 0.35),
@@ -82,6 +85,7 @@ func _subscribe_events() -> void:
 	EventBus.subscribe("regular.celebrate", func(p): _spawn_floater("%s今天生日，特别开心！" % p["name"], Color(1.0, 0.6, 0.8)))
 	EventBus.subscribe("regular.gift", func(p): _spawn_floater("%s送你一份礼物(+¥50)！" % p["name"], Color(1.0, 0.8, 0.4)))
 	EventBus.subscribe("regular.brings_friend", func(p): _spawn_floater("%s介绍了个朋友来！" % p["name"], Color(0.6, 0.9, 0.6)))
+	EventBus.subscribe("upgrade.bought", func(p): _spawn_floater("%s升级到 Lv%d！" % [p["name"], p["level"]], Color(0.4, 0.8, 0.9)))
 
 
 func _on_weather_changed(weather_id: String) -> void:
@@ -158,6 +162,7 @@ func _draw() -> void:
 	_draw_customers()
 	_draw_kitchen()
 	_draw_buttons()
+	_draw_upgrades()
 	_draw_rain()
 	_draw_floaters()
 
@@ -350,8 +355,31 @@ func _draw_dish(c: Dictionary, pos: Vector2) -> void:
 
 func _draw_buttons() -> void:
 	_draw_button(_open_rect, "开门营业", GameState.shop["day_state"] == "preparing")
-	_draw_button(_mop_rect, "拖地 (+30)", GameState.shop["day_state"] == "serving")
+	_draw_button(_mop_rect, "拖地 (+%d)" % int(30 + GameState.shop["upgrades"]["mop"] * 10), GameState.shop["day_state"] == "serving")
 	_draw_button(_close_rect, "提前打烊", GameState.shop["day_state"] == "serving")
+
+
+func _draw_upgrades() -> void:
+	if GameState.shop["day_state"] != "preparing":
+		return
+	_draw_upgrade_button(_upgrade_mop_rect, "mop")
+	_draw_upgrade_button(_upgrade_ingredient_rect, "ingredient")
+	_draw_upgrade_button(_upgrade_decor_rect, "decor")
+
+
+func _draw_upgrade_button(rect: Rect2, category: String) -> void:
+	var info: Dictionary = Catalog.get_upgrades()[category]
+	var level: int = GameState.shop["upgrades"][category]
+	var enabled: bool = level < 3 and GameState.shop["money"] >= info["costs"][level]
+	var c := Color(0.33, 0.5, 0.36) if enabled else Color(0.42, 0.42, 0.45)
+	draw_rect(rect, c)
+	draw_rect(rect, Color(0, 0, 0, 0.3), false, 2.0)
+	var label: String
+	if level >= 3:
+		label = "%s MAX" % info["name"]
+	else:
+		label = "%s Lv%d→%d ¥%d" % [info["name"], level, level + 1, info["costs"][level]]
+	draw_string(_font, rect.position + Vector2(10, rect.size.y - 14), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE)
 
 
 func _draw_button(rect: Rect2, text: String, enabled: bool) -> void:
@@ -382,6 +410,16 @@ func _input(event: InputEvent) -> void:
 
 
 func _handle_click(pos: Vector2) -> void:
+	if GameState.shop["day_state"] == "preparing":
+		if _upgrade_mop_rect.has_point(pos):
+			_shop_system.buy_upgrade("mop")
+			return
+		if _upgrade_ingredient_rect.has_point(pos):
+			_shop_system.buy_upgrade("ingredient")
+			return
+		if _upgrade_decor_rect.has_point(pos):
+			_shop_system.buy_upgrade("decor")
+			return
 	if _open_rect.has_point(pos) and GameState.shop["day_state"] == "preparing":
 		_shop_system.open_shop()
 		return

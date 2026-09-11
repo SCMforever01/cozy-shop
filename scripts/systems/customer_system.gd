@@ -180,7 +180,8 @@ func serve(customer_id: int) -> void:
 	var patience_ratio: float = c["patience"] / c["patience_max"]
 	var satisfaction: float = calc_satisfaction(patience_ratio, GameState.shop["environment"], GameState.shop["hygiene"])
 	var tip: int = int(recipe.price * satisfaction)
-	var earned: int = recipe.price + tip
+	var price_mult: float = 1.0 + GameState.shop["upgrades"]["ingredient"] * 0.15
+	var earned: int = int((recipe.price + tip) * price_mult)
 	GameState.shop["money"] += earned
 	if c.get("is_critic", false):
 		if satisfaction >= 0.7:

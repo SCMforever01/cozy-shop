@@ -31,3 +31,17 @@ func _on_day_ended(day) -> void:
 func open_shop() -> void:
 	if GameState.shop["day_state"] == "preparing":
 		GameState.shop["day_state"] = "serving"
+
+
+## 购买设备升级。category 为 "mop"/"ingredient"/"decor"。
+func buy_upgrade(category: String) -> void:
+	var info: Dictionary = Catalog.get_upgrades()[category]
+	var level: int = GameState.shop["upgrades"][category]
+	if level >= 3:
+		return
+	var cost: int = info["costs"][level]
+	if GameState.shop["money"] < cost:
+		return
+	GameState.shop["money"] -= cost
+	GameState.shop["upgrades"][category] = level + 1
+	EventBus.emit("upgrade.bought", {"name": info["name"], "level": level + 1})

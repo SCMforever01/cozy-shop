@@ -5,7 +5,7 @@ extends System
 
 
 const DECAY_PER_MINUTE: float = 1.8
-const MOP_RESTORE: float = 30.0
+const MOP_BASE: float = 30.0
 
 
 func setup() -> void:
@@ -24,4 +24,5 @@ func _on_tick(_minute) -> void:
 
 
 func mop() -> void:
-	GameState.shop["hygiene"] = minf(GameState.shop["hygiene"] + MOP_RESTORE, 100.0)
+	var restore: float = MOP_BASE + GameState.shop["upgrades"]["mop"] * 10.0
+	GameState.shop["hygiene"] = minf(GameState.shop["hygiene"] + restore, 100.0)

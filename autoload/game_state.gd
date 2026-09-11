@@ -12,6 +12,7 @@ var shop: Dictionary = {
 	"reputation": 0,    # 口碑
 	"level": 1,         # 等级
 	"day_state": "preparing",  # preparing / serving / closed
+	"upgrades": {"mop": 0, "ingredient": 0, "decor": 0},  # 设备等级 0~3
 }
 
 # 当前天气 id（对应 data/catalog.gd 的定义）

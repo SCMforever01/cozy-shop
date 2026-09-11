@@ -41,6 +41,15 @@ static func get_weather() -> Dictionary:
 	}
 
 
+## 设备升级目录：每类 3 级，costs 为各级花费。
+static func get_upgrades() -> Dictionary:
+	return {
+		"mop": {"name": "高级拖把", "costs": [150, 300, 500], "desc": "拖地恢复更多卫生"},
+		"ingredient": {"name": "优质食材", "costs": [200, 400, 600], "desc": "菜品售价更高"},
+		"decor": {"name": "舒适装修", "costs": [150, 300, 450], "desc": "环境更舒适"},
+	}
+
+
 static func _make_recipe(id: String, name: String, steps: Array, price: int, unlock_reputation: int) -> Recipe:
 	var r := Recipe.new()
 	r.id = id
