@@ -28,6 +28,7 @@ var _close_rect := Rect2(380, H - 68, 150, 48)
 var _upgrade_mop_rect := Rect2(40, H - 132, 230, 44)
 var _upgrade_ingredient_rect := Rect2(290, H - 132, 230, 44)
 var _upgrade_decor_rect := Rect2(540, H - 132, 230, 44)
+var _buy_ingredients_rect := Rect2(40, H - 196, 230, 44)
 var _reset_rect := Rect2(W - 110, H - 68, 100, 48)
 var _tutorial_step: int = -1
 var _tutorial_rect := Rect2(W * 0.15, H * 0.28, W * 0.7, H * 0.4)
@@ -109,6 +110,7 @@ func _subscribe_events() -> void:
 	EventBus.subscribe("regular.gift", func(p): _spawn_floater("%s送你一份礼物(+¥50)！" % p["name"], Color(1.0, 0.8, 0.4)))
 	EventBus.subscribe("regular.brings_friend", func(p): _spawn_floater("%s介绍了个朋友来！" % p["name"], Color(0.6, 0.9, 0.6)))
 	EventBus.subscribe("upgrade.bought", func(p): _spawn_floater("%s升级到 Lv%d！" % [p["name"], p["level"]], Color(0.4, 0.8, 0.9)))
+	EventBus.subscribe("ingredients.empty", func(_p): _spawn_floater("食材不足！开店前采购", Color(0.9, 0.4, 0.2)))
 
 
 func _on_weather_changed(weather_id: String) -> void:
@@ -214,9 +216,9 @@ func _draw_hud() -> void:
 	var forecast := ""
 	if GameState.forecast_weather_id != "":
 		forecast = " 明日:%s" % Catalog.get_weather()[GameState.forecast_weather_id].display_name
-	var line := "第%d天  8:%02d  天气:%s%s  ¥%d  %s" % [
+	var line := "第%d天  8:%02d  天气:%s%s  ¥%d  食材:%d  %s" % [
 		GameClock.day, GameClock.game_minute, _weather_text(), forecast,
-		GameState.shop["money"], _state_text(GameState.shop["day_state"]),
+		GameState.shop["money"], GameState.shop["ingredients"], _state_text(GameState.shop["day_state"]),
 	]
 	draw_string(_font, Vector2(16, 36), line, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color.WHITE)
 	_draw_bar(Vector2(16, 58), 170, GameState.shop["hygiene"], "卫生")
@@ -385,11 +387,22 @@ func _draw_buttons() -> void:
 
 
 func _draw_upgrades() -> void:
-	if GameState.shop["day_state"] != "preparing":
+	if GameState.shop["day_state"] == "closed":
 		return
-	_draw_upgrade_button(_upgrade_mop_rect, "mop")
-	_draw_upgrade_button(_upgrade_ingredient_rect, "ingredient")
-	_draw_upgrade_button(_upgrade_decor_rect, "decor")
+	_draw_buy_ingredients_button()
+	if GameState.shop["day_state"] == "preparing":
+		_draw_upgrade_button(_upgrade_mop_rect, "mop")
+		_draw_upgrade_button(_upgrade_ingredient_rect, "ingredient")
+		_draw_upgrade_button(_upgrade_decor_rect, "decor")
+
+
+func _draw_buy_ingredients_button() -> void:
+	var enabled: bool = GameState.shop["money"] >= 15
+	var c := Color(0.6, 0.45, 0.2) if enabled else Color(0.42, 0.42, 0.45)
+	draw_rect(_buy_ingredients_rect, c)
+	draw_rect(_buy_ingredients_rect, Color(0, 0, 0, 0.3), false, 2.0)
+	var label := "采购食材 +5 (¥15) [现有%d]" % GameState.shop["ingredients"]
+	draw_string(_font, _buy_ingredients_rect.position + Vector2(10, _buy_ingredients_rect.size.y - 14), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE)
 
 
 func _draw_upgrade_button(rect: Rect2, category: String) -> void:
@@ -458,6 +471,9 @@ func _handle_click(pos: Vector2) -> void:
 	if _reset_rect.has_point(pos):
 		_on_reset()
 		return
+	if GameState.shop["day_state"] != "closed" and _buy_ingredients_rect.has_point(pos):
+		_shop_system.buy_ingredients()
+		return
 	if GameState.shop["day_state"] == "preparing":
 		if _upgrade_mop_rect.has_point(pos):
 			_shop_system.buy_upgrade("mop")
@@ -514,6 +530,8 @@ func _on_reset() -> void:
 func _autoplay_tick() -> void:
 	match GameState.shop["day_state"]:
 		"preparing":
+			for i in range(10):
+				_shop_system.buy_ingredients()
 			_shop_system.open_shop()
 		"serving":
 			if GameState.shop["hygiene"] < 40.0:

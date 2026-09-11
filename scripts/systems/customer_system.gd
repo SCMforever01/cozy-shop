@@ -157,7 +157,11 @@ func take_order(customer_id: int) -> void:
 	var c: Dictionary = _find(customer_id)
 	if c.is_empty() or c["state"] != "waiting":
 		return
+	if GameState.shop["ingredients"] <= 0:
+		EventBus.emit("ingredients.empty")
+		return
 	c["state"] = "being_served"
+	GameState.shop["ingredients"] -= 1
 
 
 func make_step(customer_id: int) -> void:

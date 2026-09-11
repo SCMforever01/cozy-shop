@@ -19,6 +19,7 @@ func teardown() -> void:
 func _on_day_started(_day) -> void:
 	GameState.shop["day_state"] = "preparing"
 	GameState.shop["hygiene"] = 100.0
+	GameState.shop["ingredients"] = 0
 	_day_start_money = GameState.shop["money"]
 
 
@@ -45,3 +46,12 @@ func buy_upgrade(category: String) -> void:
 	GameState.shop["money"] -= cost
 	GameState.shop["upgrades"][category] = level + 1
 	EventBus.emit("upgrade.bought", {"name": info["name"], "level": level + 1})
+
+
+## 采购食材：+5 份，花费 ¥15。
+func buy_ingredients() -> void:
+	var cost := 15
+	if GameState.shop["money"] < cost:
+		return
+	GameState.shop["money"] -= cost
+	GameState.shop["ingredients"] += 5
