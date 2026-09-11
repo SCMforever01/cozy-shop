@@ -8,6 +8,7 @@ var _weather_system: WeatherSystem
 var _hygiene_system: HygieneSystem
 var _customer_system: CustomerSystem
 var _event_system: EventSystem
+var _save_system: SaveSystem
 
 var _font: Font
 var _autoplay: bool = false
@@ -27,6 +28,7 @@ var _close_rect := Rect2(380, H - 68, 150, 48)
 var _upgrade_mop_rect := Rect2(40, H - 132, 230, 44)
 var _upgrade_ingredient_rect := Rect2(290, H - 132, 230, 44)
 var _upgrade_decor_rect := Rect2(540, H - 132, 230, 44)
+var _reset_rect := Rect2(W - 110, H - 68, 100, 48)
 
 const DISH_COLORS := {
 	"milk_tea": Color(0.75, 0.55, 0.35),
@@ -52,18 +54,24 @@ func _ready() -> void:
 	_hygiene_system = HygieneSystem.new()
 	_customer_system = CustomerSystem.new()
 	_event_system = EventSystem.new()
+	_save_system = SaveSystem.new()
 	SystemManager.register(_shop_system)
 	SystemManager.register(_weather_system)
 	SystemManager.register(_hygiene_system)
 	SystemManager.register(_customer_system)
 	SystemManager.register(_event_system)
+	SystemManager.register(_save_system)
 	_subscribe_events()
 
 	_autoplay = "--autoplay" in OS.get_cmdline_user_args()
 	if _autoplay:
 		GameClock.seconds_per_minute = 0.1
 
+	# 读档（autoplay 测试模式跳过，保证从第 1 天开始）
+	var loaded_day: int = 0 if _autoplay else _save_system.load()
 	EventBus.emit("clock.day_started", GameClock.day)
+	if loaded_day > 0:
+		_spawn_floater("已读档，继续第 %d 天" % loaded_day, Color(0.6, 0.8, 1.0))
 
 
 func _setup_font() -> void:
@@ -357,6 +365,7 @@ func _draw_buttons() -> void:
 	_draw_button(_open_rect, "开门营业", GameState.shop["day_state"] == "preparing")
 	_draw_button(_mop_rect, "拖地 (+%d)" % int(30 + GameState.shop["upgrades"]["mop"] * 10), GameState.shop["day_state"] == "serving")
 	_draw_button(_close_rect, "提前打烊", GameState.shop["day_state"] == "serving")
+	_draw_button(_reset_rect, "重置进度", true)
 
 
 func _draw_upgrades() -> void:
@@ -410,6 +419,9 @@ func _input(event: InputEvent) -> void:
 
 
 func _handle_click(pos: Vector2) -> void:
+	if _reset_rect.has_point(pos):
+		_on_reset()
+		return
 	if GameState.shop["day_state"] == "preparing":
 		if _upgrade_mop_rect.has_point(pos):
 			_shop_system.buy_upgrade("mop")
@@ -453,6 +465,12 @@ func _handle_click(pos: Vector2) -> void:
 			if c["state"] == "waiting":
 				_customer_system.take_order(c["id"])
 			return
+
+
+func _on_reset() -> void:
+	_save_system.reset()
+	EventBus.emit("clock.day_started", GameClock.day)
+	_spawn_floater("进度已重置", Color(0.8, 0.5, 0.5))
 
 
 # ---------- 自动演示 ----------
