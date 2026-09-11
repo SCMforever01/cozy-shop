@@ -6,12 +6,12 @@ extends RefCounted
 
 static func get_recipes() -> Array:
 	return [
-		_make_recipe("milk_tea", "奶茶", ["加茶", "加奶"], 10, 0),
-		_make_recipe("juice", "果汁", ["切水果", "榨汁"], 8, 0),
-		_make_recipe("coffee", "咖啡", ["研磨", "冲泡"], 12, 0),
-		_make_recipe("sandwich", "三明治", ["切面包", "夹料", "装盘"], 15, 5),
-		_make_recipe("burger", "汉堡", ["烤面包", "煎肉", "夹料"], 18, 10),
-		_make_recipe("cake", "蛋糕", ["打面糊", "烘焙", "裱花"], 20, 15),
+		_make_recipe("milk_tea", "奶茶", ["加茶", "加奶"], 10, 0, "winter"),
+		_make_recipe("juice", "果汁", ["切水果", "榨汁"], 8, 0, "summer"),
+		_make_recipe("coffee", "咖啡", ["研磨", "冲泡"], 12, 0, "winter"),
+		_make_recipe("sandwich", "三明治", ["切面包", "夹料", "装盘"], 15, 5, "spring"),
+		_make_recipe("burger", "汉堡", ["烤面包", "煎肉", "夹料"], 18, 10, "autumn"),
+		_make_recipe("cake", "蛋糕", ["打面糊", "烘焙", "裱花"], 20, 15, "spring"),
 	]
 
 
@@ -22,6 +22,27 @@ static func get_unlocked_recipes(reputation: int) -> Array:
 		if reputation >= r.unlock_reputation:
 			result.append(r)
 	return result
+
+
+## 四季顺序，每 7 天一个季节。
+const SEASONS := ["spring", "summer", "autumn", "winter"]
+
+
+static func get_season_name(id: String) -> String:
+	match id:
+		"spring":
+			return "春"
+		"summer":
+			return "夏"
+		"autumn":
+			return "秋"
+		"winter":
+			return "冬"
+	return id
+
+
+static func get_season_for_day(day: int) -> String:
+	return SEASONS[int((day - 1) / 7.0) % 4]
 
 
 static func get_recipe_by_id(id: String) -> Recipe:
@@ -50,13 +71,14 @@ static func get_upgrades() -> Dictionary:
 	}
 
 
-static func _make_recipe(id: String, name: String, steps: Array, price: int, unlock_reputation: int) -> Recipe:
+static func _make_recipe(id: String, name: String, steps: Array, price: int, unlock_reputation: int, season: String) -> Recipe:
 	var r := Recipe.new()
 	r.id = id
 	r.display_name = name
 	r.steps = steps
 	r.price = price
 	r.unlock_reputation = unlock_reputation
+	r.season = season
 	return r
 
 

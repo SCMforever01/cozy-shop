@@ -12,3 +12,5 @@ extends Resource
 @export var price: int = 0
 ## 解锁所需口碑（口碑低于此值不可做）
 @export var unlock_reputation: int = 0
+## 应季季节（spring/summer/autumn/winter，匹配时更受欢迎）
+@export var season: String = ""

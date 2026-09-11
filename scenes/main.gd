@@ -9,6 +9,7 @@ var _hygiene_system: HygieneSystem
 var _customer_system: CustomerSystem
 var _event_system: EventSystem
 var _save_system: SaveSystem
+var _season_system: SeasonSystem
 
 var _font: Font
 var _autoplay: bool = false
@@ -69,12 +70,14 @@ func _ready() -> void:
 	_customer_system = CustomerSystem.new()
 	_event_system = EventSystem.new()
 	_save_system = SaveSystem.new()
+	_season_system = SeasonSystem.new()
 	SystemManager.register(_shop_system)
 	SystemManager.register(_weather_system)
 	SystemManager.register(_hygiene_system)
 	SystemManager.register(_customer_system)
 	SystemManager.register(_event_system)
 	SystemManager.register(_save_system)
+	SystemManager.register(_season_system)
 	_subscribe_events()
 
 	_autoplay = "--autoplay" in OS.get_cmdline_user_args()
@@ -111,6 +114,7 @@ func _subscribe_events() -> void:
 	EventBus.subscribe("regular.brings_friend", func(p): _spawn_floater("%s介绍了个朋友来！" % p["name"], Color(0.6, 0.9, 0.6)))
 	EventBus.subscribe("upgrade.bought", func(p): _spawn_floater("%s升级到 Lv%d！" % [p["name"], p["level"]], Color(0.4, 0.8, 0.9)))
 	EventBus.subscribe("ingredients.empty", func(_p): _spawn_floater("食材不足！开店前采购", Color(0.9, 0.4, 0.2)))
+	EventBus.subscribe("season.changed", func(season): _spawn_floater("进入%s天" % Catalog.get_season_name(season), Color(0.7, 0.8, 1.0)))
 
 
 func _on_weather_changed(weather_id: String) -> void:
@@ -216,8 +220,9 @@ func _draw_hud() -> void:
 	var forecast := ""
 	if GameState.forecast_weather_id != "":
 		forecast = " 明日:%s" % Catalog.get_weather()[GameState.forecast_weather_id].display_name
-	var line := "第%d天  8:%02d  天气:%s%s  ¥%d  食材:%d  %s" % [
-		GameClock.day, GameClock.game_minute, _weather_text(), forecast,
+	var line := "第%d天  8:%02d  %s·天气:%s%s  ¥%d  食材:%d  %s" % [
+		GameClock.day, GameClock.game_minute, Catalog.get_season_name(GameState.current_season),
+		_weather_text(), forecast,
 		GameState.shop["money"], GameState.shop["ingredients"], _state_text(GameState.shop["day_state"]),
 	]
 	draw_string(_font, Vector2(16, 36), line, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color.WHITE)

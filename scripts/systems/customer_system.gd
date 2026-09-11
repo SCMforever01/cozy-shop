@@ -67,8 +67,13 @@ func _try_spawn() -> void:
 
 
 func _random_recipe() -> Recipe:
-	var recipes: Array = Catalog.get_unlocked_recipes(GameState.shop["reputation"])
-	return recipes[randi() % recipes.size()]
+	var unlocked: Array = Catalog.get_unlocked_recipes(GameState.shop["reputation"])
+	var weighted: Array = []
+	for r in unlocked:
+		weighted.append(r)
+		if r.season == GameState.current_season:
+			weighted.append(r)  # 应季菜权重翻倍
+	return weighted[randi() % weighted.size()]
 
 
 func _spawn_customer(recipe: Recipe, name: String, regular_id: String, celebrating: bool = false) -> void:
@@ -185,6 +190,8 @@ func serve(customer_id: int) -> void:
 	var satisfaction: float = calc_satisfaction(patience_ratio, GameState.shop["environment"], GameState.shop["hygiene"])
 	var tip: int = int(recipe.price * satisfaction)
 	var price_mult: float = 1.0 + GameState.shop["upgrades"]["ingredient"] * 0.15
+	if recipe.season == GameState.current_season:
+		price_mult *= 1.5  # 应季加价 50%
 	var earned: int = int((recipe.price + tip) * price_mult)
 	GameState.shop["money"] += earned
 	if c.get("is_critic", false):
