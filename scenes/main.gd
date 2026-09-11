@@ -29,6 +29,19 @@ var _upgrade_mop_rect := Rect2(40, H - 132, 230, 44)
 var _upgrade_ingredient_rect := Rect2(290, H - 132, 230, 44)
 var _upgrade_decor_rect := Rect2(540, H - 132, 230, 44)
 var _reset_rect := Rect2(W - 110, H - 68, 100, 48)
+var _tutorial_step: int = -1
+var _tutorial_rect := Rect2(W * 0.15, H * 0.28, W * 0.7, H * 0.4)
+var _tutorial_next_rect := Rect2(W * 0.58, H * 0.62, 150, 46)
+var _tutorial_skip_rect := Rect2(W * 0.30, H * 0.62, 150, 46)
+
+const TUTORIAL: Array = [
+	"欢迎开店！点下方「开门营业」开始营业",
+	"客人进店点单，点客人的圆脸「接单」",
+	"食物会进右边厨房的锅，点锅一步步做菜",
+	"做完变发光盘子，点它「上菜」收钱",
+	"卫生下降点「拖地」，脏店会让客人不耐烦",
+	"每天结束自动存档，开店前点绿色按钮升级设备",
+]
 
 const DISH_COLORS := {
 	"milk_tea": Color(0.75, 0.55, 0.35),
@@ -72,6 +85,8 @@ func _ready() -> void:
 	EventBus.emit("clock.day_started", GameClock.day)
 	if loaded_day > 0:
 		_spawn_floater("已读档，继续第 %d 天" % loaded_day, Color(0.6, 0.8, 1.0))
+	elif not _autoplay:
+		_tutorial_step = 0
 
 
 func _setup_font() -> void:
@@ -173,6 +188,7 @@ func _draw() -> void:
 	_draw_upgrades()
 	_draw_rain()
 	_draw_floaters()
+	_draw_tutorial()
 
 
 func _draw_floor() -> void:
@@ -418,7 +434,27 @@ func _input(event: InputEvent) -> void:
 		_handle_click(event.position)
 
 
+func _draw_tutorial() -> void:
+	if _tutorial_step < 0:
+		return
+	draw_rect(Rect2(0, 0, W, H), Color(0, 0, 0, 0.6))
+	draw_rect(_tutorial_rect, Color(0.16, 0.16, 0.22))
+	draw_rect(_tutorial_rect, Color(0.8, 0.8, 0.9), false, 2.0)
+	draw_string(_font, _tutorial_rect.position + Vector2(30, 42), "新手引导 (%d/%d)" % [_tutorial_step + 1, TUTORIAL.size()], HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color(1.0, 0.9, 0.4))
+	draw_string(_font, _tutorial_rect.position + Vector2(30, 96), TUTORIAL[_tutorial_step], HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color.WHITE)
+	_draw_button(_tutorial_next_rect, "下一步", true)
+	_draw_button(_tutorial_skip_rect, "跳过", true)
+
+
 func _handle_click(pos: Vector2) -> void:
+	if _tutorial_step >= 0:
+		if _tutorial_next_rect.has_point(pos):
+			_tutorial_step += 1
+			if _tutorial_step >= TUTORIAL.size():
+				_tutorial_step = -1
+		elif _tutorial_skip_rect.has_point(pos):
+			_tutorial_step = -1
+		return
 	if _reset_rect.has_point(pos):
 		_on_reset()
 		return
