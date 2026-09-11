@@ -6,11 +6,22 @@ extends RefCounted
 
 static func get_recipes() -> Array:
 	return [
-		_make_recipe("milk_tea", "奶茶", ["加茶", "加奶"], 10),
-		_make_recipe("coffee", "咖啡", ["研磨", "冲泡"], 12),
-		_make_recipe("sandwich", "三明治", ["切面包", "夹料", "装盘"], 15),
-		_make_recipe("juice", "果汁", ["切水果", "榨汁"], 8),
+		_make_recipe("milk_tea", "奶茶", ["加茶", "加奶"], 10, 0),
+		_make_recipe("juice", "果汁", ["切水果", "榨汁"], 8, 0),
+		_make_recipe("coffee", "咖啡", ["研磨", "冲泡"], 12, 0),
+		_make_recipe("sandwich", "三明治", ["切面包", "夹料", "装盘"], 15, 5),
+		_make_recipe("burger", "汉堡", ["烤面包", "煎肉", "夹料"], 18, 10),
+		_make_recipe("cake", "蛋糕", ["打面糊", "烘焙", "裱花"], 20, 15),
 	]
+
+
+## 根据口碑返回已解锁的菜谱（口碑低于 unlock_reputation 的菜不出现）。
+static func get_unlocked_recipes(reputation: int) -> Array:
+	var result: Array = []
+	for r in get_recipes():
+		if reputation >= r.unlock_reputation:
+			result.append(r)
+	return result
 
 
 static func get_recipe_by_id(id: String) -> Recipe:
@@ -29,12 +40,13 @@ static func get_weather() -> Dictionary:
 	}
 
 
-static func _make_recipe(id: String, name: String, steps: Array, price: int) -> Recipe:
+static func _make_recipe(id: String, name: String, steps: Array, price: int, unlock_reputation: int) -> Recipe:
 	var r := Recipe.new()
 	r.id = id
 	r.display_name = name
 	r.steps = steps
 	r.price = price
+	r.unlock_reputation = unlock_reputation
 	return r
 
 

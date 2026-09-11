@@ -30,6 +30,8 @@ const DISH_COLORS := {
 	"coffee": Color(0.45, 0.30, 0.20),
 	"sandwich": Color(0.92, 0.72, 0.30),
 	"juice": Color(1.00, 0.60, 0.20),
+	"burger": Color(0.60, 0.38, 0.18),
+	"cake": Color(0.95, 0.62, 0.75),
 }
 const CUSTOMER_COLORS := [
 	Color(0.45, 0.70, 0.90),
@@ -76,6 +78,7 @@ func _subscribe_events() -> void:
 	EventBus.subscribe("event.rush_hour", func(_p): _spawn_floater("客流高峰！", Color(0.95, 0.55, 0.2)))
 	EventBus.subscribe("event.inspect_fail", func(p): _spawn_floater("卫生检查不合格！罚款¥%d" % p["fine"], Color(0.9, 0.3, 0.3)))
 	EventBus.subscribe("event.inspect_pass", func(_p): _spawn_floater("卫生检查合格 ✓", Color(0.3, 0.8, 0.4)))
+	EventBus.subscribe("event.equipment_failure", func(_p): _spawn_floater("设备故障！暂时不能做菜", Color(0.6, 0.5, 0.5)))
 
 
 func _on_weather_changed(weather_id: String) -> void:
@@ -374,7 +377,10 @@ func _handle_click(pos: Vector2) -> void:
 		var p := _dish_pos(i)
 		if Rect2(p.x - 55, p.y - 65, 130, 140).has_point(pos):
 			if c["state"] == "being_served":
-				_customer_system.make_step(c["id"])
+				if GameState.equipment_broken_ticks > 0:
+					_spawn_floater("设备故障中…", Color(0.6, 0.5, 0.5))
+				else:
+					_customer_system.make_step(c["id"])
 			elif c["state"] == "ready":
 				_customer_system.serve(c["id"])
 			return

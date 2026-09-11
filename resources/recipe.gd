@@ -10,3 +10,5 @@ extends Resource
 @export var steps: Array = []
 ## 售价
 @export var price: int = 0
+## 解锁所需口碑（口碑低于此值不可做）
+@export var unlock_reputation: int = 0

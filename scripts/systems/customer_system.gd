@@ -49,7 +49,8 @@ func _on_tick(_minute) -> void:
 
 func _try_spawn() -> void:
 	var traffic: float = GameState.weather_modifiers["traffic"]
-	if randf() < SPAWN_PROB_PER_MINUTE * traffic:
+	var day_factor: float = minf(1.0 + (GameClock.day - 1) * 0.04, 1.8)
+	if randf() < SPAWN_PROB_PER_MINUTE * traffic * day_factor:
 		_spawn_customer(_random_recipe(), "客人", "")
 
 	# 熟客：每天至多一次，关系越好越常来
@@ -66,7 +67,7 @@ func _try_spawn() -> void:
 
 
 func _random_recipe() -> Recipe:
-	var recipes: Array = Catalog.get_recipes()
+	var recipes: Array = Catalog.get_unlocked_recipes(GameState.shop["reputation"])
 	return recipes[randi() % recipes.size()]
 
 
@@ -159,6 +160,8 @@ func take_order(customer_id: int) -> void:
 
 
 func make_step(customer_id: int) -> void:
+	if GameState.equipment_broken_ticks > 0:
+		return
 	var c: Dictionary = _find(customer_id)
 	if c.is_empty() or c["state"] != "being_served":
 		return

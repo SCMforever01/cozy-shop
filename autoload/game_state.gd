@@ -22,6 +22,8 @@ var weather_modifiers: Dictionary = {
 	"hygiene_decay": 1.0, # 卫生劣化系数
 	"environment": 0.0,   # 环境加成
 }
+# 设备故障倒计时（>0 时无法做菜，每游戏分钟 -1）
+var equipment_broken_ticks: int = 0
 
 # 在场顾客列表（每个元素为 Dictionary）
 var customers: Array = []
