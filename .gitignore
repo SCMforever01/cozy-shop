@@ -1,0 +1,9 @@
+# Godot 生成的导入缓存
+.godot/
+
+# 构建/导出产物
+build/
+export/
+
+# 系统
+.DS_Store
