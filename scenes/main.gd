@@ -33,6 +33,9 @@ var _upgrade_decor_rect := Rect2(540, H - 132, 230, 44)
 var _buy_ingredients_rect := Rect2(40, H - 196, 230, 44)
 var _reset_rect := Rect2(W - 110, H - 68, 100, 48)
 var _lang_rect := Rect2(W - 220, H - 68, 100, 48)
+var _style_rect := Rect2(W - 330, H - 68, 100, 48)
+var _use_sprites: bool = true
+var _food_textures: Dictionary = {}
 var _tutorial_step: int = -1
 var _tutorial_rect := Rect2(W * 0.15, H * 0.28, W * 0.7, H * 0.4)
 var _tutorial_next_rect := Rect2(W * 0.58, H * 0.62, 150, 46)
@@ -70,6 +73,7 @@ const CUSTOMER_COLORS := [
 
 func _ready() -> void:
 	_setup_font()
+	_load_sprites()
 	_shop_system = ShopSystem.new()
 	_weather_system = WeatherSystem.new()
 	_hygiene_system = HygieneSystem.new()
@@ -103,6 +107,20 @@ func _ready() -> void:
 
 func _setup_font() -> void:
 	_font = load("res://assets/fonts/NotoSansSC-Static.ttf")
+
+
+func _load_sprites() -> void:
+	for id in ["milk_tea", "coffee", "juice", "sandwich", "burger", "cake", "salad", "soup", "ice_cream", "pizza"]:
+		_food_textures[id] = load("res://assets/sprites/food_%s.png" % id)
+
+
+func _draw_food(pos: Vector2, radius: float, dish_id: String, dish_color: Color) -> void:
+	if _use_sprites and _food_textures.has(dish_id):
+		var tex: Texture2D = _food_textures[dish_id]
+		var size := radius * 2.2
+		draw_texture_rect(tex, Rect2(pos.x - radius * 1.1, pos.y - radius * 1.1, size, size), false)
+	else:
+		draw_circle(pos, radius, dish_color)
 
 
 func _subscribe_events() -> void:
@@ -326,7 +344,7 @@ func _draw_bubble(pos: Vector2, c: Dictionary) -> void:
 	var bh := 34.0
 	draw_rect(Rect2(pos, Vector2(bw, bh)), Color(1, 1, 1, 0.93))
 	draw_rect(Rect2(pos, Vector2(bw, bh)), Color(0.6, 0.55, 0.5), false, 1.5)
-	draw_circle(pos + Vector2(13, bh / 2), 6, dish_color)
+	_draw_food(pos + Vector2(13, bh / 2), 7, c["recipe_id"], dish_color)
 	draw_string(_font, pos + Vector2(28, bh - 11), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(0.1, 0.1, 0.1))
 
 
@@ -363,7 +381,7 @@ func _draw_dish(c: Dictionary, pos: Vector2) -> void:
 		# 盘子 + 完成提示
 		draw_circle(pos, 34, Color(0.96, 0.96, 0.96))
 		draw_arc(pos, 34, 0, TAU, 32, Color(0.5, 0.5, 0.5, 0.4), 2.0)
-		draw_circle(pos, 20, dish_color)
+		_draw_food(pos, 20, c["recipe_id"], dish_color)
 		var pulse := 1.0 + 0.08 * sin(_t * 6.0)
 		draw_arc(pos, 42 * pulse, 0, TAU, 32, Color(0.3, 0.9, 0.4, 0.55), 3.0)
 		draw_string(_font, pos + Vector2(-48, -46), tr("✓ 点我上菜"), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.1, 0.6, 0.2))
@@ -376,7 +394,7 @@ func _draw_dish(c: Dictionary, pos: Vector2) -> void:
 	# 食材（随进度变熟变深）
 	var ratio := float(prog) / float(maxi(total, 1))
 	var food_color: Color = dish_color.lerp(Color(0.55, 0.32, 0.15), ratio)
-	draw_circle(pos, 20 + 6.0 * ratio, food_color)
+	_draw_food(pos, 20 + 6.0 * ratio, c["recipe_id"], food_color)
 	# 蒸汽
 	for k in range(3):
 		var sy := pos.y - 40 - fmod(_t * 36.0 + k * 14.0, 26.0)
@@ -399,6 +417,7 @@ func _draw_buttons() -> void:
 	_draw_button(_close_rect, tr("提前打烊"), GameState.shop["day_state"] == "serving")
 	_draw_button(_reset_rect, tr("重置进度"), true)
 	_draw_button(_lang_rect, "EN" if not _language_system.is_en() else "中文", true)
+	_draw_button(_style_rect, "像素" if _use_sprites else "代码", true)
 
 
 func _draw_upgrades() -> void:
@@ -488,6 +507,9 @@ func _handle_click(pos: Vector2) -> void:
 		return
 	if _lang_rect.has_point(pos):
 		_language_system.toggle()
+		return
+	if _style_rect.has_point(pos):
+		_use_sprites = not _use_sprites
 		return
 	if GameState.shop["day_state"] != "closed" and _buy_ingredients_rect.has_point(pos):
 		_shop_system.buy_ingredients()
