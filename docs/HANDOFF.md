@@ -55,6 +55,7 @@ python3 serve.py 8090
 7. **Kenney 图集裁格**：图块 16px、**间隔 1px（pitch=17）**，按 `crop(c*17, r*17, c*17+16, r*17+16)` 取，别按 16 的倍数切（第一版贴图错位就是这个原因）。
 8. **顾客排版**：顾客行距 82px，精灵图只能按 **3 倍（48px）** 画（整数倍缩放才清晰），名牌/耐心条的位置随 `sprite_mode` 变化（贴图模式在头顶空隙内，代码模式在圆上方），改行距或精灵尺寸时两处 offset 要一起调。
 9. **多 tile 家具**：Roguelike 系列家具是跨格大件（床/桌 2x2 起），单格切出来是碎片；背景里别硬拼，用单格装饰（窗/盆栽/相框）最稳。
+10. **wasm 模零陷阱**：`randi() % arr.size()` 在空数组时 x86 上炸/网页版直接 RuntimeError 崩游戏——`get_unlocked_recipes` 在口碑为负时会返回空（v1 就有此雷，v2 已在 `_random_recipe` 加兜底），任何 `%` 变量除数都要防 0。
 
 ## 6. 当前状态
 
@@ -108,6 +109,14 @@ python3 serve.py 8090
 
 背景 `shop_bg.png`（1280×720）构成：墙 (9,2)/(9,3)、地板 (7,2)/(7,3)、厨房区 (6,2)/(6,3)、窗 (40,4)、盆栽/相框来自 roguelike-indoors (16,0)/(17,0)/(18,0)。
 
+### 🚧 进行中：v2 玩法改造（压力 → 真实 → 决策）
+
+> 用户实测反馈 v1「点点点、机械、不真实」，判决与改造方案见飞书 **04.5 · v2 交互设计**。验收标准从此是「好玩」，用户实玩打回则不进下一阶段。
+
+- **P1 压力感 ✅ 已完成**：做菜改为工位流水线（备菜台/灶台×2/装盘台自动计时，点菜推进一步）；灶台做完 8 秒不取走糊锅（食材报废+客人气走+台面清理 3 秒）；拖地改为 3 秒占用动作（期间做不了菜）；地面污渍随卫生可见。单元测试 `test_kitchen.gd` 16 例。
+- **P2 真实感 ⬜**：落座/用餐/留盘/满座走人 + 装修改背景可见。
+- **P3 决策感 ⬜**：升级二选一、采购囤货取舍、天气改变玩法。
+
 ### ⬜ 待做
 
 - 美术完善（更多路人 sprite、天气氛围背景、厨房大件家具）
@@ -126,6 +135,7 @@ python3 serve.py 8090
 - 05 原型范围与路线图
 - 实现计划 · 第一波可玩原型：https://www.feishu.cn/wiki/FfatwsokaiHuXdkoTXTceMsCntB
 - 后续开发规划（Roadmap）：https://www.feishu.cn/wiki/XEAUwujlCiTYXqkbwJgcbzHfnfd
+- **04.5 · v2 交互设计（压力·真实·决策）**：https://www.feishu.cn/wiki/O2VEwKMuriVrMlkIoMRchYLrnyd
 
 ### 本地文档
 - `README.md`：使用说明、项目结构、如何扩展
@@ -141,6 +151,7 @@ cd /home/mi/workstation/game/cozy-shop
 godot --headless --script res://tests/test_event_bus.gd
 godot --headless --script res://tests/test_satisfaction.gd
 godot --headless --script res://tests/test_font.gd
+godot --headless --script res://tests/test_kitchen.gd   # v2 工位/糊锅/拖地
 # 冒烟测试（自动演示跑 N 帧）
 godot --headless --quit-after 20000 -- --autoplay
 ```

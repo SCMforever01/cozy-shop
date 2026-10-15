@@ -6,7 +6,7 @@ extends Resource
 @export var id: String = ""
 @export var display_name: String = ""
 @export_multiline var description: String = ""
-## 制作步骤，如 ["切菜", "煎制"]（Phase 1 的轻操作据此生成）
+## 制作步骤：[{name, station, sec}]，station: prep/stove/plate（v2 工位流水线据此驱动）
 @export var steps: Array = []
 ## 售价
 @export var price: int = 0

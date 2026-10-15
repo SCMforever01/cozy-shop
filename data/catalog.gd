@@ -6,17 +6,22 @@ extends RefCounted
 
 static func get_recipes() -> Array:
 	return [
-		_make_recipe("milk_tea", "奶茶", ["加茶", "加奶"], 10, 0, "winter"),
-		_make_recipe("juice", "果汁", ["切水果", "榨汁"], 8, 0, "summer"),
-		_make_recipe("coffee", "咖啡", ["研磨", "冲泡"], 12, 0, "winter"),
-		_make_recipe("sandwich", "三明治", ["切面包", "夹料", "装盘"], 15, 5, "spring"),
-		_make_recipe("salad", "沙拉", ["洗菜", "切菜", "拌酱"], 14, 8, "spring"),
-		_make_recipe("burger", "汉堡", ["烤面包", "煎肉", "夹料"], 18, 10, "autumn"),
-		_make_recipe("cake", "蛋糕", ["打面糊", "烘焙", "裱花"], 20, 15, "spring"),
-		_make_recipe("soup", "热汤", ["切菜", "炖煮", "调味"], 24, 18, "winter"),
-		_make_recipe("ice_cream", "冰淇淋", ["挖球", "淋酱", "装杯"], 22, 22, "summer"),
-		_make_recipe("pizza", "披萨", ["揉面", "铺料", "烘烤"], 28, 28, "autumn"),
+		_make_recipe("milk_tea", "奶茶", [_step("加茶", "stove", 4), _step("加奶", "plate", 2)], 10, 0, "winter"),
+		_make_recipe("juice", "果汁", [_step("切水果", "prep", 3), _step("榨汁", "stove", 4)], 8, 0, "summer"),
+		_make_recipe("coffee", "咖啡", [_step("研磨", "prep", 3), _step("冲泡", "stove", 5)], 12, 0, "winter"),
+		_make_recipe("sandwich", "三明治", [_step("切面包", "prep", 3), _step("夹料", "prep", 3), _step("装盘", "plate", 2)], 15, 5, "spring"),
+		_make_recipe("salad", "沙拉", [_step("洗菜", "prep", 3), _step("切菜", "prep", 3), _step("拌酱", "plate", 2)], 14, 8, "spring"),
+		_make_recipe("burger", "汉堡", [_step("烤面包", "stove", 4), _step("煎肉", "stove", 6), _step("夹料", "plate", 2)], 18, 10, "autumn"),
+		_make_recipe("cake", "蛋糕", [_step("打面糊", "prep", 4), _step("烘焙", "stove", 7), _step("裱花", "plate", 3)], 20, 15, "spring"),
+		_make_recipe("soup", "热汤", [_step("切菜", "prep", 3), _step("炖煮", "stove", 8), _step("调味", "plate", 2)], 24, 18, "winter"),
+		_make_recipe("ice_cream", "冰淇淋", [_step("挖球", "prep", 3), _step("淋酱", "plate", 2), _step("装杯", "plate", 2)], 22, 22, "summer"),
+		_make_recipe("pizza", "披萨", [_step("揉面", "prep", 4), _step("铺料", "prep", 3), _step("烘烤", "stove", 8)], 28, 28, "autumn"),
 	]
+
+
+## 制作步骤：name=步骤名，station=工位（prep 备菜台 / stove 灶台 / plate 装盘台），sec=耗时（真实秒）。
+static func _step(name: String, station: String, sec: float) -> Dictionary:
+	return {"name": name, "station": station, "sec": sec}
 
 
 ## 根据口碑返回已解锁的菜谱（口碑低于 unlock_reputation 的菜不出现）。

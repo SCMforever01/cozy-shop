@@ -18,6 +18,7 @@ func setup() -> void:
 	EventBus.subscribe("clock.day_started", _on_day_started)
 	EventBus.subscribe("event.food_critic", _on_food_critic)
 	EventBus.subscribe("event.rush_hour", _on_rush_hour)
+	EventBus.subscribe("kitchen.burnt", _on_burnt)
 
 
 func teardown() -> void:
@@ -25,6 +26,7 @@ func teardown() -> void:
 	EventBus.unsubscribe("clock.day_started", _on_day_started)
 	EventBus.unsubscribe("event.food_critic", _on_food_critic)
 	EventBus.unsubscribe("event.rush_hour", _on_rush_hour)
+	EventBus.unsubscribe("kitchen.burnt", _on_burnt)
 
 
 func _on_day_started(_day) -> void:
@@ -73,6 +75,8 @@ func _random_recipe() -> Recipe:
 		weighted.append(r)
 		if r.season == GameState.current_season:
 			weighted.append(r)  # 应季菜权重翻倍
+	if weighted.is_empty():
+		weighted = Catalog.get_recipes()  # 兜底：口碑为负也要有点单（防 %0 崩溃）
 	return weighted[randi() % weighted.size()]
 
 
@@ -87,6 +91,7 @@ func _spawn_customer(recipe: Recipe, name: String, regular_id: String, celebrati
 		"patience_max": patience_base,
 		"state": "waiting",
 		"make_progress": 0,
+		"cook": {"station_id": -1, "phase": ""},
 		"regular_id": regular_id,
 		"is_critic": false,
 		"celebrating": celebrating,
@@ -116,6 +121,7 @@ func _spawn_critic() -> void:
 		"patience_max": 120.0,
 		"state": "waiting",
 		"make_progress": 0,
+		"cook": {"station_id": -1, "phase": ""},
 		"regular_id": "",
 		"is_critic": true,
 	}
@@ -153,7 +159,7 @@ func _angry_leave(c: Dictionary) -> void:
 			if r["relationship"] <= -2:
 				r["lost"] = true
 				EventBus.emit("regular.lost", {"name": r["name"]})
-	EventBus.emit("customer.left_angry", {"name": c["name"]})
+	EventBus.emit("customer.left_angry", {"id": c["id"], "name": c["name"]})
 
 
 # ---------- 制作流程 ----------
@@ -166,19 +172,15 @@ func take_order(customer_id: int) -> void:
 		EventBus.emit("ingredients.empty")
 		return
 	c["state"] = "being_served"
+	c["cook"] = {"station_id": -1, "phase": "queued"}
 	GameState.shop["ingredients"] -= 1
 
 
-func make_step(customer_id: int) -> void:
-	if GameState.equipment_broken_ticks > 0:
-		return
-	var c: Dictionary = _find(customer_id)
-	if c.is_empty() or c["state"] != "being_served":
-		return
-	var recipe: Recipe = Catalog.get_recipe_by_id(c["recipe_id"])
-	c["make_progress"] += 1
-	if c["make_progress"] >= recipe.steps.size():
-		c["state"] = "ready"
+func _on_burnt(p) -> void:
+	# 糊锅：客人被气走（工位清理由 KitchenSystem 负责）
+	var c: Dictionary = _find(p.get("id", -1))
+	if not c.is_empty():
+		_angry_leave(c)
 
 
 func serve(customer_id: int) -> void:

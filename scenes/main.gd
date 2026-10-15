@@ -7,6 +7,7 @@ var _shop_system: ShopSystem
 var _weather_system: WeatherSystem
 var _hygiene_system: HygieneSystem
 var _customer_system: CustomerSystem
+var _kitchen_system: KitchenSystem
 var _event_system: EventSystem
 var _save_system: SaveSystem
 var _season_system: SeasonSystem
@@ -46,9 +47,9 @@ var _tutorial_skip_rect := Rect2(W * 0.30, H * 0.62, 150, 46)
 const TUTORIAL: Array = [
 	"欢迎开店！点下方「开门营业」开始营业",
 	"客人进店点单，点客人「接单」",
-	"食物会进右边厨房的锅，点锅一步步做菜",
+	"点厨房里的菜上工位，步骤自动计时；灶台做完 8 秒内取走，否则糊锅",
 	"做完变发光盘子，点它「上菜」收钱",
-	"卫生下降点「拖地」，脏店会让客人不耐烦",
+	"地面变脏点「拖地」（要花 3 秒，期间做不了菜），脏店客人没耐心",
 	"每天结束自动存档，开店前点绿色按钮升级设备",
 ]
 
@@ -71,6 +72,11 @@ const CUSTOMER_COLORS := [
 	Color(0.90, 0.75, 0.50),
 	Color(0.70, 0.60, 0.90),
 ]
+## 地面污渍的固定位置（越脏出现越多，最多 8 处）
+const DIRT_SPOTS := [
+	Vector2(430, 610), Vector2(700, 540), Vector2(150, 560), Vector2(600, 260),
+	Vector2(840, 420), Vector2(120, 380), Vector2(520, 430), Vector2(760, 640),
+]
 
 
 func _ready() -> void:
@@ -80,6 +86,7 @@ func _ready() -> void:
 	_weather_system = WeatherSystem.new()
 	_hygiene_system = HygieneSystem.new()
 	_customer_system = CustomerSystem.new()
+	_kitchen_system = KitchenSystem.new()
 	_event_system = EventSystem.new()
 	_save_system = SaveSystem.new()
 	_season_system = SeasonSystem.new()
@@ -88,6 +95,7 @@ func _ready() -> void:
 	SystemManager.register(_weather_system)
 	SystemManager.register(_hygiene_system)
 	SystemManager.register(_customer_system)
+	SystemManager.register(_kitchen_system)
 	SystemManager.register(_event_system)
 	SystemManager.register(_save_system)
 	SystemManager.register(_season_system)
@@ -144,6 +152,9 @@ func _subscribe_events() -> void:
 	EventBus.subscribe("regular.lost", func(p): _spawn_floater(tr("%s不来了…") % tr(p["name"]), Color(0.85, 0.4, 0.6)))
 	EventBus.subscribe("day.summary", _on_day_summary)
 	EventBus.subscribe("event.food_critic", func(_p): _spawn_floater(tr("美食评论家来了！"), Color(0.75, 0.45, 0.95)))
+	EventBus.subscribe("kitchen.burnt", func(_p): _spawn_floater(tr("糊了！食材报废，客人气走了"), Color(0.9, 0.3, 0.25)))
+	EventBus.subscribe("dish.ready", func(_p): _spawn_floater(tr("✓ 可以上菜了"), Color(0.3, 0.85, 0.4)))
+	EventBus.subscribe("kitchen.blocked", func(p): _spawn_floater(tr("工位被占满了！") if str(p.get("reason", "")) == "occupied" else tr("设备故障中…"), Color(0.7, 0.5, 0.4)))
 	EventBus.subscribe("event.rush_hour", func(_p): _spawn_floater(tr("客流高峰！"), Color(0.95, 0.55, 0.2)))
 	EventBus.subscribe("event.inspect_fail", func(p): _spawn_floater(tr("卫生检查不合格！罚款¥%d") % p["fine"], Color(0.9, 0.3, 0.3)))
 	EventBus.subscribe("event.inspect_pass", func(_p): _spawn_floater(tr("卫生检查合格 ✓"), Color(0.3, 0.8, 0.4)))
@@ -226,6 +237,7 @@ func _process(delta: float) -> void:
 
 func _draw() -> void:
 	_draw_floor()
+	_draw_dirt()
 	_draw_sun()
 	_draw_hud()
 	_draw_customers()
@@ -366,9 +378,15 @@ func _draw_bubble(pos: Vector2, c: Dictionary) -> void:
 	if c["state"] == "waiting":
 		progress = tr("（点我接单）")
 	elif c["state"] == "being_served":
-		progress = tr(" 制作中…")
+		match c["cook"]["phase"]:
+			"queued":
+				progress = tr("（点我上工位）")
+			"cooking":
+				progress = tr(" 制作中…")
+			"done":
+				progress = tr("（点我取走）")
 	elif c["state"] == "ready":
-		progress = tr(" ✓")
+		progress = tr("（点我上菜）")
 	var text: String = tr(c["recipe_name"]) + progress
 
 	var bw := 128.0
@@ -381,70 +399,109 @@ func _draw_bubble(pos: Vector2, c: Dictionary) -> void:
 
 func _draw_kitchen() -> void:
 	draw_string(_font, Vector2(W * 0.72 + 40, 110), tr("厨房"), HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color(0.45, 0.35, 0.25))
-	var active := _active_dishes()
-	if active.is_empty():
-		draw_string(_font, Vector2(W * 0.72 + 40, 150), tr("接单后在这里做菜"), HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(0.55, 0.5, 0.45))
-		return
-	for i in range(active.size()):
-		_draw_dish(active[i], _dish_pos(i))
-
-
-func _active_dishes() -> Array:
-	var active: Array = []
+	draw_string(_font, Vector2(W * 0.72 + 40, 134), tr("点菜推进一步 · 灶台做完 8 秒内取走，否则糊锅"), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.55, 0.5, 0.45))
+	for i in range(_kitchen_system.stations.size()):
+		_draw_station(_kitchen_system.stations[i], _station_pos(i))
+	# 待处理的菜：等工位的 / 做完待上菜的（在工位上的菜由工位卡片绘制）
+	var slot := 0
 	for c in GameState.customers:
-		if c["state"] == "being_served" or c["state"] == "ready":
-			active.append(c)
-	return active
+		if c["state"] != "being_served" and c["state"] != "ready":
+			continue
+		if c["cook"]["station_id"] >= 0:
+			continue
+		_draw_waiting_dish(c, _waiting_pos(slot))
+		slot += 1
 
 
-func _dish_pos(i: int) -> Vector2:
-	return Vector2(W * 0.72 + 150, 160 + i * 150)
+func _station_pos(i: int) -> Vector2:
+	return Vector2(1015 + (i % 2) * 170, 265 + (i / 2) * 180)
 
 
-func _draw_dish(c: Dictionary, pos: Vector2) -> void:
-	var recipe := Catalog.get_recipe_by_id(c["recipe_id"])
+func _waiting_pos(i: int) -> Vector2:
+	return Vector2(985 + i * 72, 615)
+
+
+func _customer_by_id(cid: int) -> Dictionary:
+	for c in GameState.customers:
+		if c["id"] == cid:
+			return c
+	return {}
+
+
+func _draw_station(s: Dictionary, pos: Vector2) -> void:
+	var rect := Rect2(pos + Vector2(-78, -62), Vector2(156, 128))
+	draw_rect(rect, Color(0.16, 0.15, 0.2, 0.88))
+	draw_rect(rect, Color(0.55, 0.5, 0.42, 0.9), false, 2.0)
+	draw_string(_font, rect.position + Vector2(12, 24), tr(s["name"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(1.0, 0.95, 0.85))
+	match s["phase"]:
+		"":
+			draw_string(_font, rect.position + Vector2(12, 72), tr("空闲"), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0.58, 0.58, 0.64))
+		"blocked":
+			draw_string(_font, rect.position + Vector2(12, 56), tr("清理中…"), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0.9, 0.5, 0.3))
+			_draw_bar_bg(rect.position + Vector2(12, 72), 132, 10)
+			_draw_bar_fill(rect.position + Vector2(12, 72), 132, 10, 1.0 - s["timer"] / 3.0, Color(0.9, 0.5, 0.3))
+		"cooking", "done":
+			var c := _customer_by_id(s["customer_id"])
+			if c.is_empty():
+				return
+			var dish_color: Color = DISH_COLORS.get(c["recipe_id"], Color.WHITE)
+			var recipe := Catalog.get_recipe_by_id(c["recipe_id"])
+			var step: Dictionary = recipe.steps[c["make_progress"]]
+			_draw_food(rect.position + Vector2(36, 76), 21, c["recipe_id"], dish_color)
+			draw_string(_font, rect.position + Vector2(70, 52), tr(step["name"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0.95, 0.9, 0.8))
+			if s["phase"] == "cooking":
+				_draw_bar_bg(rect.position + Vector2(70, 62), 76, 9)
+				var prog: float = 1.0 - s["timer"] / maxf(step["sec"], 0.01)
+				_draw_bar_fill(rect.position + Vector2(70, 62), 76, 9, prog, Color(0.35, 0.75, 0.95))
+				draw_string(_font, rect.position + Vector2(70, 92), tr("制作中…"), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.7, 0.75, 0.85))
+			else:
+				var pulse := 0.6 + 0.4 * absf(sin(_t * 5.0))
+				draw_string(_font, rect.position + Vector2(70, 78), tr("✓ 点我取走"), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0.3, 0.9, 0.4, pulse))
+				if s["burn_timer"] > 0.0:
+					_draw_bar_bg(rect.position + Vector2(70, 88), 76, 8)
+					_draw_bar_fill(rect.position + Vector2(70, 88), 76, 8, s["burn_timer"] / 8.0, Color(0.9, 0.25, 0.2))
+					draw_string(_font, rect.position + Vector2(12, 108), tr("快糊了！"), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1.0, 0.35, 0.25, pulse))
+
+
+func _draw_waiting_dish(c: Dictionary, pos: Vector2) -> void:
 	var dish_color: Color = DISH_COLORS.get(c["recipe_id"], Color.WHITE)
-	var total: int = recipe.steps.size()
-	var prog: int = c["make_progress"]
-	var done: bool = c["state"] == "ready"
+	if c["state"] == "ready":
+		var pulse := 1.0 + 0.1 * sin(_t * 6.0)
+		draw_arc(pos, 31 * pulse, 0, TAU, 24, Color(0.3, 0.9, 0.4, 0.6), 3.0)
+		draw_circle(pos, 25, Color(0.96, 0.96, 0.96, 0.95))
+		_draw_food(pos, 17, c["recipe_id"], dish_color)
+		draw_string(_font, pos + Vector2(-26, 46), tr("✓ 上菜"), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.2, 0.75, 0.35))
+	else:
+		draw_circle(pos, 25, Color(0.22, 0.22, 0.28, 0.92))
+		_draw_food(pos, 17, c["recipe_id"], dish_color)
+		draw_string(_font, pos + Vector2(-26, 46), tr("上工位"), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.85, 0.8, 0.7))
 
-	if done:
-		# 盘子 + 完成提示
-		draw_circle(pos, 34, Color(0.96, 0.96, 0.96))
-		draw_arc(pos, 34, 0, TAU, 32, Color(0.5, 0.5, 0.5, 0.4), 2.0)
-		_draw_food(pos, 20, c["recipe_id"], dish_color)
-		var pulse := 1.0 + 0.08 * sin(_t * 6.0)
-		draw_arc(pos, 42 * pulse, 0, TAU, 32, Color(0.3, 0.9, 0.4, 0.55), 3.0)
-		draw_string(_font, pos + Vector2(-48, -46), tr("✓ 点我上菜"), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.1, 0.6, 0.2))
-		return
 
-	# 锅 + 柄
-	draw_circle(pos, 36, Color(0.25, 0.25, 0.28))
-	draw_arc(pos, 36, 0, TAU, 32, Color(0, 0, 0, 0.3), 2.0)
-	draw_line(pos + Vector2(32, 0), pos + Vector2(72, 0), Color(0.25, 0.25, 0.28), 8)
-	# 食材（随进度变熟变深）
-	var ratio := float(prog) / float(maxi(total, 1))
-	var food_color: Color = dish_color.lerp(Color(0.55, 0.32, 0.15), ratio)
-	_draw_food(pos, 20 + 6.0 * ratio, c["recipe_id"], food_color)
-	# 蒸汽
-	for k in range(3):
-		var sy := pos.y - 40 - fmod(_t * 36.0 + k * 14.0, 26.0)
-		draw_circle(Vector2(pos.x - 12 + k * 12, sy), 3.5, Color(0.85, 0.85, 0.9, 0.5))
-	# 步骤名
-	var step_name: String = tr(recipe.steps[prog]) if prog < total else tr("完成")
-	draw_string(_font, pos + Vector2(-52, -50), tr("%s (%d/%d)") % [step_name, prog, total], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(0.15, 0.1, 0.05))
-	# 进度点
-	for s in range(total):
-		var dot := pos + Vector2(-float(total - 1) * 8.0 + s * 16.0, 54)
-		if s < prog:
-			draw_circle(dot, 4.5, Color(0.3, 0.8, 0.4))
-		else:
-			draw_circle(dot, 4.5, Color(0.6, 0.6, 0.6))
+func _draw_bar_bg(pos: Vector2, w: float, h: float) -> void:
+	draw_rect(Rect2(pos, Vector2(w, h)), Color(0, 0, 0, 0.45))
+
+
+func _draw_bar_fill(pos: Vector2, w: float, h: float, ratio: float, color: Color) -> void:
+	draw_rect(Rect2(pos, Vector2(w * clampf(ratio, 0.0, 1.0), h)), color)
+
+
+func _draw_dirt() -> void:
+	var n: int = _hygiene_system.dirt_spots()
+	for i in range(n):
+		var p: Vector2 = DIRT_SPOTS[i]
+		draw_circle(p, 17.0, Color(0.42, 0.3, 0.16, 0.32))
+		draw_circle(p + Vector2(11, 7), 9.0, Color(0.42, 0.3, 0.16, 0.28))
+		draw_circle(p + Vector2(-9, 9), 7.0, Color(0.38, 0.26, 0.13, 0.28))
 
 
 func _draw_buttons() -> void:
 	_draw_button(_open_rect, tr("开门营业"), GameState.shop["day_state"] == "preparing")
-	_draw_button(_mop_rect, tr("拖地") + " (+%d)" % int(30 + GameState.shop["upgrades"]["mop"] * 10), GameState.shop["day_state"] == "serving")
+	var mop_label: String = tr("拖地") + " (+%d)" % int(30 + GameState.shop["upgrades"]["mop"] * 10)
+	if _hygiene_system.is_mopping():
+		mop_label = tr("拖地中…")
+	_draw_button(_mop_rect, mop_label, GameState.shop["day_state"] == "serving")
+	if _hygiene_system.is_mopping():
+		draw_rect(Rect2(_mop_rect.position + Vector2(6, _mop_rect.size.y - 10), Vector2((_mop_rect.size.x - 12) * _hygiene_system.mop_progress(), 5)), Color(0.4, 0.8, 1.0, 0.9))
 	_draw_button(_close_rect, tr("提前打烊"), GameState.shop["day_state"] == "serving")
 	_draw_button(_reset_rect, tr("重置进度"), true)
 	_draw_button(_lang_rect, "EN" if not _language_system.is_en() else "中文", true)
@@ -559,25 +616,42 @@ func _handle_click(pos: Vector2) -> void:
 		_shop_system.open_shop()
 		return
 	if _mop_rect.has_point(pos) and GameState.shop["day_state"] == "serving":
-		_hygiene_system.mop()
+		_hygiene_system.start_mop()
 		return
 	if _close_rect.has_point(pos) and GameState.shop["day_state"] == "serving":
 		GameClock.end_day_now()
 		return
 
-	# 厨房里的菜：点击做菜/上菜
-	var active := _active_dishes()
-	for i in range(active.size() - 1, -1, -1):
-		var c = active[i]
-		var p := _dish_pos(i)
-		if Rect2(p.x - 55, p.y - 65, 130, 140).has_point(pos):
-			if c["state"] == "being_served":
-				if GameState.equipment_broken_ticks > 0:
-					_spawn_floater("设备故障中…", Color(0.6, 0.5, 0.5))
-				else:
-					_customer_system.make_step(c["id"])
-			elif c["state"] == "ready":
+	# 拖地占用双手：动作没做完不能做菜/接单（「锅要糊 vs 地上一摊」的取舍）
+	if _hygiene_system.is_mopping():
+		_spawn_floater(tr("正在拖地…"), Color(0.55, 0.7, 0.9))
+		return
+
+	# 厨房工位：点卡片 = 派菜上工位 / 取走成品
+	for i in range(_kitchen_system.stations.size() - 1, -1, -1):
+		var s: Dictionary = _kitchen_system.stations[i]
+		var sp := _station_pos(i)
+		if Rect2(sp.x - 78, sp.y - 62, 156, 128).has_point(pos):
+			if s["customer_id"] >= 0:
+				_kitchen_system.tap_dish(s["customer_id"])
+			else:
+				_kitchen_system.tap_station(s["id"])
+			return
+
+	# 待处理的菜：等工位的 / 做完待上菜的
+	var slot := 0
+	for c in GameState.customers:
+		if c["state"] != "being_served" and c["state"] != "ready":
+			continue
+		if c["cook"]["station_id"] >= 0:
+			continue
+		var wp := _waiting_pos(slot)
+		slot += 1
+		if Rect2(wp.x - 30, wp.y - 30, 60, 80).has_point(pos):
+			if c["state"] == "ready":
 				_customer_system.serve(c["id"])
+			else:
+				_kitchen_system.tap_dish(c["id"])
 			return
 
 	# 客人：点击接单
@@ -606,13 +680,13 @@ func _autoplay_tick() -> void:
 			_shop_system.open_shop()
 		"serving":
 			if GameState.shop["hygiene"] < 40.0:
-				_hygiene_system.mop()
+				_hygiene_system.start_mop()
 			for c in GameState.customers.duplicate():
 				match c["state"]:
 					"waiting":
 						_customer_system.take_order(c["id"])
 					"being_served":
-						_customer_system.make_step(c["id"])
+						_kitchen_system.tap_dish(c["id"])
 					"ready":
 						_customer_system.serve(c["id"])
 
