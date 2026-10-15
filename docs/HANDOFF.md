@@ -1,6 +1,6 @@
 # 交接文档（HANDOFF）
 
-> 供其他 agent / 开发者接手本项目。最后更新：2026-09-11。
+> 供其他 agent / 开发者接手本项目。最后更新：2026-10-15。
 
 ## 1. 仓库与路径
 
@@ -52,6 +52,9 @@ python3 serve.py 8090
 4. **`:=` 类型推断**：从 Dictionary/Array 取值无法推断类型，用显式 `var x: Type =`。
 5. **pkill 自匹配**：`pkill -f "serve.py 8090"` 会匹配当前 shell 自己。用 `pkill -f "serve[.]py"`。
 6. **字体诊断方法**：加 ASCII-only 的 `print` 或 Label，绕过中文字体问题。
+7. **Kenney 图集裁格**：图块 16px、**间隔 1px（pitch=17）**，按 `crop(c*17, r*17, c*17+16, r*17+16)` 取，别按 16 的倍数切（第一版贴图错位就是这个原因）。
+8. **顾客排版**：顾客行距 82px，精灵图只能按 **3 倍（48px）** 画（整数倍缩放才清晰），名牌/耐心条的位置随 `sprite_mode` 变化（贴图模式在头顶空隙内，代码模式在圆上方），改行距或精灵尺寸时两处 offset 要一起调。
+9. **多 tile 家具**：Roguelike 系列家具是跨格大件（床/桌 2x2 起），单格切出来是碎片；背景里别硬拼，用单格装饰（窗/盆栽/相框）最稳。
 
 ## 6. 当前状态
 
@@ -70,18 +73,44 @@ python3 serve.py 8090
 | 存档 | 自动存档/读档/重置（web 走 IndexedDB） |
 | 新手引导 | 首次游戏 6 步引导卡片 |
 | i18n | 中英双语切换（右下角按钮） |
-| 美术（部分） | 10 道菜接入真实像素食物贴图 + 「像素/代码」风格切换 |
+| 美术 | 食物贴图（10 道菜逐一视觉核对）+ 顾客像素角色 + 店铺背景 + 「像素/代码」风格切换 |
 
-### 🚧 进行中：美术
+### 🚧 进行中：美术完善
 
-- **当前状态**：食物图标已接真实像素图（Kenney CC0），顾客角色/店铺背景仍是代码图形。
-- **卡点**：**模型读不了图**（deepseek 和 MiMo-v2.6-pro-ultraspeed 都不支持图像输入），没法确认食物 tile 对应哪道菜（现在是按颜色猜的，可能错位）。
-- **素材来源**：`/tmp/opencode/assets/`（已下载 Kenney 食物/角色/UI + Roguelike 厨房包）。
-- **下一步**：要么换带视觉的模型精确对接，要么人工告知「哪块 tile 是哪道菜」。
+- **当前状态**（2026-10-15 更新）：食物贴图已全部重新精确裁剪并视觉核对（旧版 18×18 贴图全是错位碎片，已全部替换）；顾客角色（3 熟客 + 评论家 + 6 路人）已接像素头像；店铺背景（墙/窗/地板/厨房区/盆栽）已接入。全部改动经网页导出 + 浏览器截图验证（排队/接单/做菜全流程）。
+- **剩余**：更多路人 sprite 变体、天气主题背景（雨天/台风氛围）、厨房灶台等大件家具（多 tile 拼接，见坑 9）。
+- **素材来源**（Kenney CC0，重新下载，原 `/tmp/opencode/assets/` 已被 /tmp 清理丢失）：
+  - 食物：[pixel-platformer-food-expansion](https://kenney.nl/assets/pixel-platformer-food-expansion) + [roguelike-rpg-pack](https://kenney.nl/assets/roguelike-rpg-pack)
+  - 角色：[roguelike-characters](https://kenney.nl/assets/roguelike-characters)
+  - 背景：[roguelike-rpg-pack](https://kenney.nl/assets/roguelike-rpg-pack)（砖墙/石地/窗）+ [roguelike-indoors](https://kenney.nl/assets/roguelike-indoors)（盆栽/相框）
+- **贴图映射**（图集内坐标，`(列,行)`，16px 图块 + 1px 间隔）：
+
+| 菜品 | 来源 | 坐标 | 备注 |
+|---|---|---|---|
+| burger | pixel-food | tile_0090 | |
+| sandwich | pixel-food | tile_0093 | 长三明治的左段（0093-0095 是一整条） |
+| pizza | pixel-food | tile_0106 | 带料披萨角 |
+| cake | pixel-food | tile_0038 | 千层蛋糕切块 |
+| ice_cream | pixel-food | tile_0108 | 撒糖针旋风甜筒 |
+| coffee | pixel-food | tile_0089 | 白色马克杯 |
+| milk_tea | pixel-food | tile_0083 | 杯装，蓝色液体已重着色为奶茶色 |
+| juice | pixel-food | tile_0082 | 高脚杯，蓝色液体已重着色为橙色 |
+| salad | roguelike-rpg | (55,17) | 碗装沙拉，裁透明边后放大到 16×16 |
+| soup | roguelike-rpg | (56,16) | 汤碗，同上 |
+
+| 角色 | 来源 | 坐标 |
+|---|---|---|
+| 老张 laozhang | roguelike-characters | (1,6) 戴帽络腮胡 |
+| 小王 xiaowang | roguelike-characters | (1,9) 黑发青年 |
+| 李姐 lijie | roguelike-characters | (1,7) 长发橙裙 |
+| 评论家 critic | roguelike-characters | (1,11) 白袍 |
+| 路人 g0~g5 | roguelike-characters | (0,5) (0,7) (0,8) (0,9) (0,10) (1,10) |
+
+背景 `shop_bg.png`（1280×720）构成：墙 (9,2)/(9,3)、地板 (7,2)/(7,3)、厨房区 (6,2)/(6,3)、窗 (40,4)、盆栽/相框来自 roguelike-indoors (16,0)/(17,0)/(18,0)。
 
 ### ⬜ 待做
 
-- 美术完善（顾客角色 sprite、店铺背景 tilemap）
+- 美术完善（更多路人 sprite、天气氛围背景、厨房大件家具）
 - 数值平衡（需实测反馈）
 - 音效/音乐（需素材）
 - 更多内容（菜/客人/事件，数据驱动很快）
@@ -115,6 +144,8 @@ godot --headless --script res://tests/test_font.gd
 # 冒烟测试（自动演示跑 N 帧）
 godot --headless --quit-after 20000 -- --autoplay
 ```
+
+改渲染/贴图后建议做**网页视觉验证**：导出 Web 构建 → `python3 serve.py <端口>` → 用 Playwright（channel: chrome）截图走一遍「跳过引导 → 采购 → 开门 → 接单 → 做菜」，坐标参考：跳过 (459,469)、采购 (155,546)、开门 (115,676)、第一位客人 (250,140)、第一口锅 (1070,160)。
 
 ## 9. Git 提交规范
 

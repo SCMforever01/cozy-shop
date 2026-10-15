@@ -36,6 +36,8 @@ var _lang_rect := Rect2(W - 220, H - 68, 100, 48)
 var _style_rect := Rect2(W - 330, H - 68, 100, 48)
 var _use_sprites: bool = true
 var _food_textures: Dictionary = {}
+var _customer_textures: Dictionary = {}
+var _bg_texture: Texture2D
 var _tutorial_step: int = -1
 var _tutorial_rect := Rect2(W * 0.15, H * 0.28, W * 0.7, H * 0.4)
 var _tutorial_next_rect := Rect2(W * 0.58, H * 0.62, 150, 46)
@@ -43,7 +45,7 @@ var _tutorial_skip_rect := Rect2(W * 0.30, H * 0.62, 150, 46)
 
 const TUTORIAL: Array = [
 	"欢迎开店！点下方「开门营业」开始营业",
-	"客人进店点单，点客人的圆脸「接单」",
+	"客人进店点单，点客人「接单」",
 	"食物会进右边厨房的锅，点锅一步步做菜",
 	"做完变发光盘子，点它「上菜」收钱",
 	"卫生下降点「拖地」，脏店会让客人不耐烦",
@@ -112,6 +114,17 @@ func _setup_font() -> void:
 func _load_sprites() -> void:
 	for id in ["milk_tea", "coffee", "juice", "sandwich", "burger", "cake", "salad", "soup", "ice_cream", "pizza"]:
 		_food_textures[id] = load("res://assets/sprites/food_%s.png" % id)
+	_bg_texture = load("res://assets/sprites/shop_bg.png")
+	for key in ["laozhang", "xiaowang", "lijie", "critic", "g0", "g1", "g2", "g3", "g4", "g5"]:
+		_customer_textures[key] = load("res://assets/sprites/customer_%s.png" % key)
+
+
+func _customer_texture(c: Dictionary) -> Texture2D:
+	if c.get("is_critic", false):
+		return _customer_textures.get("critic") as Texture2D
+	if c["regular_id"] != "" and _customer_textures.has(c["regular_id"]):
+		return _customer_textures[c["regular_id"]] as Texture2D
+	return _customer_textures.get("g%d" % (int(c["id"]) % 6)) as Texture2D
 
 
 func _draw_food(pos: Vector2, radius: float, dish_id: String, dish_color: Color) -> void:
@@ -225,9 +238,12 @@ func _draw() -> void:
 
 
 func _draw_floor() -> void:
-	draw_rect(Rect2(0, HUD_H, W, H - HUD_H), Color(0.96, 0.94, 0.88))
-	draw_rect(Rect2(W * 0.72, HUD_H, W * 0.28, H - HUD_H), Color(0.83, 0.76, 0.67))
-	draw_line(Vector2(W * 0.72, HUD_H), Vector2(W * 0.72, H), Color(0.55, 0.45, 0.35), 4.0)
+	if _use_sprites and _bg_texture != null:
+		draw_texture_rect(_bg_texture, Rect2(0, 0, W, H), false)
+	else:
+		draw_rect(Rect2(0, HUD_H, W, H - HUD_H), Color(0.96, 0.94, 0.88))
+		draw_rect(Rect2(W * 0.72, HUD_H, W * 0.28, H - HUD_H), Color(0.83, 0.76, 0.67))
+		draw_line(Vector2(W * 0.72, HUD_H), Vector2(W * 0.72, H), Color(0.55, 0.45, 0.35), 4.0)
 	# 底部操作提示
 	draw_string(_font, Vector2(560, H - 14), tr("点客人接单 → 点锅做菜 → 点盘子上菜 · 点按钮拖地/开门/打烊"), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.4, 0.35, 0.3))
 
@@ -290,19 +306,32 @@ func _draw_customer(c: Dictionary, pos: Vector2, idx: int) -> void:
 	var r := radius * scale
 
 	# 影子 + 身体
-	draw_circle(pos + Vector2(0, radius - 4), radius, Color(0, 0, 0, 0.12))
-	draw_circle(pos, r, body)
-	draw_arc(pos, r, 0, TAU, 32, Color(0, 0, 0, 0.25), 2.0)
-
-	# 眼睛
-	draw_circle(pos + Vector2(-11 * scale, -8 * scale), 3.5 * scale, Color(0.1, 0.1, 0.1))
-	draw_circle(pos + Vector2(11 * scale, -8 * scale), 3.5 * scale, Color(0.1, 0.1, 0.1))
-
-	# 嘴（心情）
-	if mood > 0.5:
-		draw_arc(pos + Vector2(0, 4), 10 * scale, PI + 0.15, TAU - 0.15, 12, Color(0.1, 0.1, 0.1), 2.0)
+	var tex: Texture2D = _customer_texture(c)
+	var sprite_mode := _use_sprites and tex != null
+	if sprite_mode:
+		var s := r * 1.5
+		draw_circle(pos + Vector2(0, radius * 0.66), radius * 0.62, Color(0, 0, 0, 0.12))
+		draw_texture_rect(tex, Rect2(pos.x - s / 2, pos.y - s / 2, s, s), false)
+		# 心情角标
+		var badge := pos + Vector2(radius * 0.8, -radius * 0.9)
+		if mood > 0.5:
+			draw_arc(badge, 8.0 * scale, PI + 0.2, TAU - 0.2, 8, Color(0.2, 0.75, 0.35), 2.0)
+		else:
+			draw_arc(badge, 8.0 * scale, 0.2, PI - 0.2, 8, Color(0.85, 0.25, 0.2), 2.0)
 	else:
-		draw_arc(pos + Vector2(0, 12), 10 * scale, 0.15, PI - 0.15, 12, Color(0.1, 0.1, 0.1), 2.0)
+		draw_circle(pos + Vector2(0, radius - 4), radius, Color(0, 0, 0, 0.12))
+		draw_circle(pos, r, body)
+		draw_arc(pos, r, 0, TAU, 32, Color(0, 0, 0, 0.25), 2.0)
+
+		# 眼睛
+		draw_circle(pos + Vector2(-11 * scale, -8 * scale), 3.5 * scale, Color(0.1, 0.1, 0.1))
+		draw_circle(pos + Vector2(11 * scale, -8 * scale), 3.5 * scale, Color(0.1, 0.1, 0.1))
+
+		# 嘴（心情）
+		if mood > 0.5:
+			draw_arc(pos + Vector2(0, 4), 10 * scale, PI + 0.15, TAU - 0.15, 12, Color(0.1, 0.1, 0.1), 2.0)
+		else:
+			draw_arc(pos + Vector2(0, 12), 10 * scale, 0.15, PI - 0.15, 12, Color(0.1, 0.1, 0.1), 2.0)
 
 	# 生日帽
 	if c.get("celebrating", false):
@@ -316,11 +345,13 @@ func _draw_customer(c: Dictionary, pos: Vector2, idx: int) -> void:
 	# 名牌（熟客 / 评论家）
 	if c["regular_id"] != "" or c.get("is_critic", false):
 		var name_color := Color(1.0, 0.9, 0.5) if c["regular_id"] != "" else Color(0.85, 0.7, 1.0)
-		draw_string(_font, pos + Vector2(-radius, -radius - 34), tr(c["name"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, name_color)
+		var name_dy: float = -26.0 if sprite_mode else -66.0
+		draw_string(_font, pos + Vector2(-radius, name_dy), tr(c["name"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, name_color)
 
 	# 头顶耐心条
 	var bar_w := radius * 2.0
-	var bar_pos := pos + Vector2(-radius, -radius - 22)
+	var bar_dy: float = -56.0 if sprite_mode else -54.0
+	var bar_pos := pos + Vector2(-radius, bar_dy)
 	draw_rect(Rect2(bar_pos, Vector2(bar_w, 8)), Color(0, 0, 0, 0.4))
 	draw_rect(Rect2(bar_pos, Vector2(bar_w * mood, 8)), _patience_color(mood))
 

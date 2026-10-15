@@ -119,7 +119,7 @@ static func get_en() -> Dictionary:
 		# 教程
 		"新手引导 (%d/%d)": "Tutorial (%d/%d)",
 		"欢迎开店！点下方「开门营业」开始营业": "Welcome! Click 'Open Shop' to start",
-		"客人进店点单，点客人的圆脸「接单」": "Customers order; click their face to take the order",
+		"客人进店点单，点客人「接单」": "Customers order; click a customer to take the order",
 		"食物会进右边厨房的锅，点锅一步步做菜": "Food goes into the kitchen pan; click to cook step by step",
 		"做完变发光盘子，点它「上菜」收钱": "When done it becomes a glowing plate; click to serve",
 		"卫生下降点「拖地」，脏店会让客人不耐烦": "Mop when hygiene drops; a dirty shop annoys customers",
