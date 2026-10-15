@@ -1,0 +1,17 @@
+{
+  "name": "cozy-shop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "温馨小店 · 休闲烹饪游戏（Godot 网页版 + Capacitor 安卓壳）",
+  "type": "module",
+  "scripts": {
+    "cap:sync": "npx cap sync android",
+    "cap:android": "npx cap sync android && cd android && gradlew.bat assembleDebug",
+    "open:android": "npx cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/cli": "^8.5.2",
+    "@capacitor/core": "^8.5.2"
+  }
+}

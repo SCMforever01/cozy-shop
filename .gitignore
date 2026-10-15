@@ -7,3 +7,13 @@ export/
 
 # 系统
 .DS_Store
+
+# Node / Capacitor（安卓壳）
+node_modules/
+android/.gradle/
+android/build/
+android/app/build/
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/local.properties
+gradle_*.log
