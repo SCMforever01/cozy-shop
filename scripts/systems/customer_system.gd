@@ -5,7 +5,8 @@ extends System
 
 
 ## 每游戏分钟生成顾客的基础概率（受天气客流系数影响）。
-const SPAWN_PROB_PER_MINUTE: float = 0.22
+## 0.14 ≈ 一天 8~9 人：配合 4 个工位是「忙得过来但要动脑」的密度。
+const SPAWN_PROB_PER_MINUTE: float = 0.14
 ## 每游戏分钟耐心衰减量（受卫生惩罚放大）。
 const PATIENCE_DECAY_PER_MINUTE: float = 3.0
 

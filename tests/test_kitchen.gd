@@ -50,7 +50,7 @@ func _initialize() -> void:
 	_check(c["cook"]["phase"] == "done" and ks.stations[1]["burn_timer"] > 0.0, "灶台完成后进入糊锅倒计时")
 
 	# 用例 5：倒计时结束 → 糊锅 + 灶台被清理占用
-	for i in range(85):
+	for i in range(115):
 		ks._process(0.1)
 	_check(c["cook"]["phase"] == "burnt", "宽限期后糊锅")
 	_check(ks.stations[1]["phase"] == "blocked" and ks.stations[1]["timer"] > 0.0, "糊锅后台面被清理占用")

@@ -47,7 +47,7 @@ var _tutorial_skip_rect := Rect2(W * 0.30, H * 0.62, 150, 46)
 const TUTORIAL: Array = [
 	"欢迎开店！点下方「开门营业」开始营业",
 	"客人进店点单，点客人「接单」",
-	"点厨房里的菜上工位，步骤自动计时；灶台做完 8 秒内取走，否则糊锅",
+	"点厨房里的菜上工位，步骤自动计时；灶台做好趁热取走，晚了糊锅",
 	"做完变发光盘子，点它「上菜」收钱",
 	"地面变脏点「拖地」（要花 3 秒，期间做不了菜），脏店客人没耐心",
 	"每天结束自动存档，开店前点绿色按钮升级设备",
@@ -399,7 +399,7 @@ func _draw_bubble(pos: Vector2, c: Dictionary) -> void:
 
 func _draw_kitchen() -> void:
 	draw_string(_font, Vector2(W * 0.72 + 40, 110), tr("厨房"), HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color(0.45, 0.35, 0.25))
-	draw_string(_font, Vector2(W * 0.72 + 40, 134), tr("点菜推进一步 · 灶台做完 8 秒内取走，否则糊锅"), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.55, 0.5, 0.45))
+	draw_string(_font, Vector2(W * 0.72 + 40, 134), tr("点菜推进一步 · 灶台做好趁热取走，晚了会糊锅"), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.55, 0.5, 0.45))
 	for i in range(_kitchen_system.stations.size()):
 		_draw_station(_kitchen_system.stations[i], _station_pos(i))
 	# 待处理的菜：等工位的 / 做完待上菜的（在工位上的菜由工位卡片绘制）
@@ -459,7 +459,7 @@ func _draw_station(s: Dictionary, pos: Vector2) -> void:
 				draw_string(_font, rect.position + Vector2(70, 78), tr("✓ 点我取走"), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0.3, 0.9, 0.4, pulse))
 				if s["burn_timer"] > 0.0:
 					_draw_bar_bg(rect.position + Vector2(70, 88), 76, 8)
-					_draw_bar_fill(rect.position + Vector2(70, 88), 76, 8, s["burn_timer"] / 8.0, Color(0.9, 0.25, 0.2))
+					_draw_bar_fill(rect.position + Vector2(70, 88), 76, 8, s["burn_timer"] / KitchenSystem.BURN_GRACE, Color(0.9, 0.25, 0.2))
 					draw_string(_font, rect.position + Vector2(12, 108), tr("快糊了！"), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1.0, 0.35, 0.25, pulse))
 
 

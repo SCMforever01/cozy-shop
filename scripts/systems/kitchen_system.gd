@@ -5,7 +5,7 @@ extends System
 ## - 灶台步骤做完有宽限期，不取走就糊锅：食材报废 + 客人气走 + 灶台被清理占用
 ## - 工位并行 = 「先救哪口锅」的取舍
 
-const BURN_GRACE := 8.0     ## 灶台做完不取走的糊锅宽限（秒）
+const BURN_GRACE := 10.0    ## 灶台做完不取走的糊锅宽限（秒）
 const CLEAN_TIME := 3.0     ## 糊锅后台面清理占用（秒）
 
 ## 工位表：kind 与菜谱步骤的 station 对应

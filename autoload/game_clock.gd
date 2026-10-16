@@ -7,7 +7,8 @@ extends Node
 ## 之后的每天由 _end_day() 触发。
 
 ## 每个游戏内分钟对应的真实秒数。
-var seconds_per_minute: float = 1.0
+## 2.0 = 营业日约 2 分钟真实时间：与真实秒计的烹饪节奏匹配（1.0 时一天 60 秒根本服务不过来）。
+var seconds_per_minute: float = 2.0
 ## 每天营业的游戏内分钟数（默认 60 分钟 = 1 小时，约 1 分钟真实时间）。
 var minutes_per_day: int = 60
 
