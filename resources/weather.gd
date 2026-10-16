@@ -10,3 +10,5 @@ extends Resource
 @export var hygiene_decay_modifier: float = 1.0
 ## 环境值加成（负数表示阴冷不适）
 @export var environment_modifier: float = 0.0
+## 售价系数（雨天/台风客流低但客人愿意多付钱）
+@export var price_modifier: float = 1.0

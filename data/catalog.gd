@@ -63,18 +63,21 @@ static func get_recipe_by_id(id: String) -> Recipe:
 
 static func get_weather() -> Dictionary:
 	return {
-		"sunny": _make_weather("sunny", "晴", 1.0, 1.0, 0.0),
-		"overcast": _make_weather("overcast", "阴", 0.85, 1.0, -8.0),
-		"rain": _make_weather("rain", "雨", 0.55, 1.5, -15.0),
-		"storm": _make_weather("storm", "暴雨", 0.30, 1.8, -25.0),
-		"typhoon": _make_weather("typhoon", "台风", 0.10, 1.0, -35.0),
+		"sunny": _make_weather("sunny", "晴", 1.0, 1.0, 0.0, 1.0),
+		"overcast": _make_weather("overcast", "阴", 0.85, 1.0, -8.0, 1.0),
+		"rain": _make_weather("rain", "雨", 0.55, 1.5, -15.0, 1.2),
+		"storm": _make_weather("storm", "暴雨", 0.30, 1.8, -25.0, 1.35),
+		"typhoon": _make_weather("typhoon", "台风", 0.10, 1.0, -35.0, 1.5),
 	}
 
 
-## 设备升级目录：每类 3 级，costs 为各级花费。
+## 设备升级目录：costs 为各级花费（长度即为最大等级）。
+## v2 P3 决策感：钱只够买一部分，每一档都是真取舍。
 static func get_upgrades() -> Dictionary:
 	return {
-		"mop": {"name": "高级拖把", "costs": [150, 300, 500], "desc": "拖地恢复更多卫生"},
+		"mop": {"name": "高级拖把", "costs": [150, 300, 500], "desc": "拖地更快更净"},
+		"stove": {"name": "快灶台", "costs": [200, 400], "desc": "烹饪提速 25%"},
+		"seat": {"name": "座位扩建", "costs": [300], "desc": "加一张餐桌"},
 		"ingredient": {"name": "优质食材", "costs": [200, 400, 600], "desc": "菜品售价更高"},
 		"decor": {"name": "舒适装修", "costs": [150, 300, 450], "desc": "环境更舒适"},
 	}
@@ -91,11 +94,12 @@ static func _make_recipe(id: String, name: String, steps: Array, price: int, unl
 	return r
 
 
-static func _make_weather(id: String, name: String, traffic: float, hygiene_decay: float, environment: float) -> WeatherType:
+static func _make_weather(id: String, name: String, traffic: float, hygiene_decay: float, environment: float, price: float) -> WeatherType:
 	var w := WeatherType.new()
 	w.id = id
 	w.display_name = name
 	w.customer_traffic_modifier = traffic
 	w.hygiene_decay_modifier = hygiene_decay
 	w.environment_modifier = environment
+	w.price_modifier = price
 	return w

@@ -12,9 +12,10 @@ var shop: Dictionary = {
 	"reputation": 0,    # 口碑
 	"level": 1,         # 等级
 	"day_state": "preparing",  # preparing / serving / closed
-	"upgrades": {"mop": 0, "ingredient": 0, "decor": 0},  # 设备等级 0~3
+	"upgrades": {"mop": 0, "stove": 0, "seat": 0, "ingredient": 0, "decor": 0},  # 设备等级 0~3
 	"ingredients": 0,  # 当前食材库存（当天用不完过期）
 	"holiday": false,  # 节日促销（当天菜品加价）
+	"skip_spoilage": false,  # 台风歇业：当天结束不过期（保库存）
 }
 
 # 当前天气 id（对应 data/catalog.gd 的定义）
@@ -41,7 +42,13 @@ var seats: Array = [
 	{"id": 0, "customer_id": -1, "dirty": false},
 	{"id": 1, "customer_id": -1, "dirty": false},
 	{"id": 2, "customer_id": -1, "dirty": false},
+	{"id": 3, "customer_id": -1, "dirty": false},
 ]
+
+
+## 当前可用座位数：基础 3 桌 + 座位扩建等级。
+func seat_capacity() -> int:
+	return mini(3 + int(shop["upgrades"].get("seat", 0)), seats.size())
 
 # 熟客列表（每个熟客一个字典，可扩展更多熟客）
 var regulars: Array = [

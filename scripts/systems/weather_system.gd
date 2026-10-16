@@ -31,20 +31,22 @@ func _apply_weather(id: String) -> void:
 		"traffic": w.customer_traffic_modifier,
 		"hygiene_decay": w.hygiene_decay_modifier,
 		"environment": w.environment_modifier,
+		"price": w.price_modifier,
 	}
 	GameState.shop["environment"] = 100.0 + w.environment_modifier + GameState.shop["upgrades"]["decor"] * 10.0
 	EventBus.emit("weather.changed", id)
 
 
-## 加权随机天气：晴 45% / 阴 20% / 雨 15% / 暴雨 15% / 台风 5%
+## 加权随机天气：晴 45% / 阴 20% / 雨 10% / 暴雨 15% / 台风 10%
+## 台风权重 10%：让「歇业 vs 搏一把」的决策每 10 来天就能遇到一次。
 func _roll_weather() -> String:
 	var r := randf()
 	if r < 0.45:
 		return "sunny"
 	if r < 0.65:
 		return "overcast"
-	if r < 0.80:
+	if r < 0.75:
 		return "rain"
-	if r < 0.95:
+	if r < 0.90:
 		return "storm"
 	return "typhoon"

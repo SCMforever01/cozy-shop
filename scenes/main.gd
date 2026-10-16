@@ -28,10 +28,13 @@ const HUD_H := 64.0
 var _open_rect := Rect2(40, H - 68, 150, 48)
 var _mop_rect := Rect2(210, H - 68, 150, 48)
 var _close_rect := Rect2(380, H - 68, 150, 48)
-var _upgrade_mop_rect := Rect2(40, H - 132, 230, 44)
-var _upgrade_ingredient_rect := Rect2(290, H - 132, 230, 44)
-var _upgrade_decor_rect := Rect2(540, H - 132, 230, 44)
+var _upgrade_mop_rect := Rect2(40, H - 132, 168, 44)
+var _upgrade_stove_rect := Rect2(216, H - 132, 168, 44)
+var _upgrade_seat_rect := Rect2(392, H - 132, 168, 44)
+var _upgrade_ingredient_rect := Rect2(568, H - 132, 168, 44)
+var _upgrade_decor_rect := Rect2(744, H - 132, 168, 44)
 var _buy_ingredients_rect := Rect2(40, H - 196, 230, 44)
+var _buy_bulk_rect := Rect2(290, H - 196, 230, 44)
 var _reset_rect := Rect2(W - 110, H - 68, 100, 48)
 var _lang_rect := Rect2(W - 220, H - 68, 100, 48)
 var _style_rect := Rect2(W - 330, H - 68, 100, 48)
@@ -161,6 +164,7 @@ func _subscribe_events() -> void:
 	EventBus.subscribe("event.food_critic", func(_p): _spawn_floater(tr("美食评论家来了！"), Color(0.75, 0.45, 0.95)))
 	EventBus.subscribe("kitchen.burnt", func(_p): _spawn_floater(tr("糊了！食材报废，客人气走了"), Color(0.9, 0.3, 0.25)))
 	EventBus.subscribe("customer.left_no_seat", func(_p): _spawn_floater(tr("没座位，客人走了"), Color(0.85, 0.55, 0.4)))
+	EventBus.subscribe("ingredients.spoiled", func(p): _spawn_floater(tr("食材过期，浪费 %d 份") % int(p["amount"]), Color(0.85, 0.6, 0.3)))
 	EventBus.subscribe("dish.ready", func(_p): _spawn_floater(tr("✓ 可以上菜了"), Color(0.3, 0.85, 0.4)))
 	EventBus.subscribe("kitchen.blocked", func(p): _spawn_floater(tr("工位被占满了！") if str(p.get("reason", "")) == "occupied" else tr("设备故障中…"), Color(0.7, 0.5, 0.4)))
 	EventBus.subscribe("event.rush_hour", func(_p): _spawn_floater(tr("客流高峰！"), Color(0.95, 0.55, 0.2)))
@@ -555,7 +559,7 @@ func _draw_decor_tex(key: String, pos: Vector2, scale: int) -> void:
 
 ## 餐桌：桌椅 + 用餐/脏盘状态（桌子画在顾客前面，像坐在桌后）。
 func _draw_tables() -> void:
-	for i in range(GameState.seats.size()):
+	for i in range(GameState.seat_capacity()):
 		var seat: Dictionary = GameState.seats[i]
 		var p: Vector2 = SEAT_POS[i]
 		var level: int = GameState.shop["upgrades"]["decor"]
@@ -602,7 +606,9 @@ func _draw_buttons() -> void:
 	_draw_button(_mop_rect, mop_label, GameState.shop["day_state"] == "serving")
 	if _hygiene_system.is_mopping():
 		draw_rect(Rect2(_mop_rect.position + Vector2(6, _mop_rect.size.y - 10), Vector2((_mop_rect.size.x - 12) * _hygiene_system.mop_progress(), 5)), Color(0.4, 0.8, 1.0, 0.9))
-	_draw_button(_close_rect, tr("提前打烊"), GameState.shop["day_state"] == "serving")
+	# 台风天二选一：开门搏一把（默认） vs 台风歇业保库存
+	var typhoon_day: bool = GameState.shop["day_state"] == "preparing" and GameState.weather_id == "typhoon"
+	_draw_button(_close_rect, tr("台风歇业") if typhoon_day else tr("提前打烊"), GameState.shop["day_state"] == "serving" or typhoon_day)
 	_draw_button(_reset_rect, tr("重置进度"), true)
 	_draw_button(_lang_rect, "EN" if not _language_system.is_en() else "中文", true)
 	_draw_button(_style_rect, "像素" if _use_sprites else "代码", true)
@@ -614,17 +620,23 @@ func _draw_upgrades() -> void:
 	_draw_buy_ingredients_button()
 	if GameState.shop["day_state"] == "preparing":
 		_draw_upgrade_button(_upgrade_mop_rect, "mop")
+		_draw_upgrade_button(_upgrade_stove_rect, "stove")
+		_draw_upgrade_button(_upgrade_seat_rect, "seat")
 		_draw_upgrade_button(_upgrade_ingredient_rect, "ingredient")
 		_draw_upgrade_button(_upgrade_decor_rect, "decor")
 
 
 func _draw_buy_ingredients_button() -> void:
-	var enabled: bool = GameState.shop["money"] >= 15
+	_draw_buy_button(_buy_ingredients_rect, tr("小份 +5 (¥15) 现有%d") % GameState.shop["ingredients"], 15)
+	_draw_buy_button(_buy_bulk_rect, tr("囤货 +15 (¥35) 更划算"), 35)
+
+
+func _draw_buy_button(rect: Rect2, label: String, cost: int) -> void:
+	var enabled: bool = GameState.shop["money"] >= cost
 	var c := Color(0.6, 0.45, 0.2) if enabled else Color(0.42, 0.42, 0.45)
-	draw_rect(_buy_ingredients_rect, c)
-	draw_rect(_buy_ingredients_rect, Color(0, 0, 0, 0.3), false, 2.0)
-	var label := tr("采购食材 +5 (¥15) [现有%d]") % GameState.shop["ingredients"]
-	draw_string(_font, _buy_ingredients_rect.position + Vector2(10, _buy_ingredients_rect.size.y - 14), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE)
+	draw_rect(rect, c)
+	draw_rect(rect, Color(0, 0, 0, 0.3), false, 2.0)
+	draw_string(_font, rect.position + Vector2(10, rect.size.y - 14), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color.WHITE)
 
 
 func _draw_upgrade_button(rect: Rect2, category: String) -> void:
@@ -700,11 +712,20 @@ func _handle_click(pos: Vector2) -> void:
 		_use_sprites = not _use_sprites
 		return
 	if GameState.shop["day_state"] != "closed" and _buy_ingredients_rect.has_point(pos):
-		_shop_system.buy_ingredients()
+		_shop_system.buy_ingredients(5, 15)
+		return
+	if GameState.shop["day_state"] != "closed" and _buy_bulk_rect.has_point(pos):
+		_shop_system.buy_ingredients(15, 35)
 		return
 	if GameState.shop["day_state"] == "preparing":
 		if _upgrade_mop_rect.has_point(pos):
 			_shop_system.buy_upgrade("mop")
+			return
+		if _upgrade_stove_rect.has_point(pos):
+			_shop_system.buy_upgrade("stove")
+			return
+		if _upgrade_seat_rect.has_point(pos):
+			_shop_system.buy_upgrade("seat")
 			return
 		if _upgrade_ingredient_rect.has_point(pos):
 			_shop_system.buy_upgrade("ingredient")
@@ -719,6 +740,12 @@ func _handle_click(pos: Vector2) -> void:
 		_hygiene_system.start_mop()
 		return
 	if _close_rect.has_point(pos) and GameState.shop["day_state"] == "serving":
+		GameClock.end_day_now()
+		return
+	# 台风天二选一：歇业保库存（当天食材不过期，不白耗）
+	if _close_rect.has_point(pos) and GameState.shop["day_state"] == "preparing" and GameState.weather_id == "typhoon":
+		GameState.shop["skip_spoilage"] = true
+		_spawn_floater(tr("台风歇业，库存保住了"), Color(0.55, 0.75, 0.95))
 		GameClock.end_day_now()
 		return
 
@@ -785,8 +812,8 @@ func _on_reset() -> void:
 func _autoplay_tick() -> void:
 	match GameState.shop["day_state"]:
 		"preparing":
-			for i in range(10):
-				_shop_system.buy_ingredients()
+			_shop_system.buy_ingredients(15, 35)
+			_shop_system.buy_ingredients(15, 35)
 			_shop_system.open_shop()
 		"serving":
 			if GameState.shop["hygiene"] < 40.0:
@@ -818,7 +845,11 @@ func _state_text(s: String) -> String:
 
 
 func _weather_text() -> String:
-	return tr(Catalog.get_weather()[GameState.weather_id].display_name)
+	var w: WeatherType = Catalog.get_weather()[GameState.weather_id]
+	var premium: float = GameState.weather_modifiers.get("price", 1.0)
+	if premium > 1.0:
+		return "%s(单价+%d%%)" % [tr(w.display_name), int((premium - 1.0) * 100.0)]
+	return tr(w.display_name)
 
 
 func _regular_status() -> String:

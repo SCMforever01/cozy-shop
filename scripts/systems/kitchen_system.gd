@@ -122,12 +122,17 @@ func _dispatch(c: Dictionary) -> bool:
 		if s["kind"] == step["station"] and s["phase"] == "":
 			s["customer_id"] = c["id"]
 			s["phase"] = "cooking"
-			s["timer"] = step["sec"]
+			s["timer"] = step["sec"] * _cook_speed()
 			s["burn_timer"] = 0.0
 			c["cook"] = {"station_id": s["id"], "phase": "cooking"}
 			return true
 	EventBus.emit("kitchen.blocked", {"reason": "occupied"})
 	return false
+
+
+## 快灶台升级：每级烹饪提速 25%。
+func _cook_speed() -> float:
+	return maxf(1.0 - 0.25 * GameState.shop["upgrades"].get("stove", 0), 0.5)
 
 
 func _pickup(c: Dictionary) -> void:

@@ -53,7 +53,11 @@ func load() -> int:
 	GameState.shop["money"] = int(data["shop"]["money"])
 	GameState.shop["reputation"] = int(data["shop"]["reputation"])
 	GameState.shop["level"] = int(data["shop"]["level"])
-	GameState.shop["upgrades"] = data["shop"]["upgrades"]
+	# 升级键按当前版本补齐（旧存档没有 seat/stove 等新键，缺省 0）
+	var loaded_upgrades: Dictionary = data["shop"].get("upgrades", {})
+	for k in GameState.shop["upgrades"].keys():
+		loaded_upgrades[k] = int(loaded_upgrades.get(k, 0))
+	GameState.shop["upgrades"] = loaded_upgrades
 	GameState.regulars = data["regulars"]
 	return int(data["day"])
 
@@ -67,7 +71,7 @@ func reset() -> void:
 	GameState.shop["money"] = 100
 	GameState.shop["reputation"] = 0
 	GameState.shop["level"] = 1
-	GameState.shop["upgrades"] = {"mop": 0, "ingredient": 0, "decor": 0}
+	GameState.shop["upgrades"] = {"mop": 0, "stove": 0, "seat": 0, "ingredient": 0, "decor": 0}
 	for r in GameState.regulars:
 		r["relationship"] = 0
 		r["visits"] = 0

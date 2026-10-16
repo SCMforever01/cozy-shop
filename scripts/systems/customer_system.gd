@@ -156,6 +156,8 @@ func _seat_or_queue(c: Dictionary) -> void:
 
 func _try_seat(c: Dictionary) -> bool:
 	for s in GameState.seats:
+		if s["id"] >= GameState.seat_capacity():
+			continue  # 未解锁的扩建座位
 		if s["customer_id"] == -1 and not s["dirty"]:
 			s["customer_id"] = c["id"]
 			c["seat_id"] = s["id"]
@@ -299,6 +301,7 @@ func serve(customer_id: int) -> void:
 	var satisfaction: float = calc_satisfaction(patience_ratio, GameState.shop["environment"], GameState.shop["hygiene"])
 	var tip: int = int(recipe.price * satisfaction)
 	var price_mult: float = 1.0 + GameState.shop["upgrades"]["ingredient"] * 0.15
+	price_mult *= GameState.weather_modifiers.get("price", 1.0)  # 雨天/台风溢价
 	if recipe.season == GameState.current_season:
 		price_mult *= 1.5  # 应季加价 50%
 	if GameState.shop["holiday"]:
