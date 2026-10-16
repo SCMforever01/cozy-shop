@@ -33,6 +33,9 @@ func teardown() -> void:
 func _on_day_started(_day) -> void:
 	_spawned_today.clear()
 	GameState.customers.clear()
+	for s in GameState.seats:
+		s["customer_id"] = -1
+		s["dirty"] = false
 	# 熟客缓慢恢复（可挽回：不再犯错，关系慢慢回暖）
 	for r in GameState.regulars:
 		if r["relationship"] < 0:
@@ -96,9 +99,14 @@ func _spawn_customer(recipe: Recipe, name: String, regular_id: String, celebrati
 		"regular_id": regular_id,
 		"is_critic": false,
 		"celebrating": celebrating,
+		"seat_id": -1,
+		"at_door": false,
+		"enter_t": 0.0,
+		"dine_timer": 0.0,
 	}
 	_next_id += 1
 	GameState.customers.append(customer)
+	_seat_or_queue(customer)
 	EventBus.emit("customer.entered", {"name": name, "recipe_name": recipe.display_name, "celebrating": celebrating})
 
 
@@ -125,10 +133,103 @@ func _spawn_critic() -> void:
 		"cook": {"station_id": -1, "phase": ""},
 		"regular_id": "",
 		"is_critic": true,
+		"seat_id": -1,
+		"at_door": false,
+		"enter_t": 0.0,
+		"dine_timer": 0.0,
 	}
 	_next_id += 1
 	GameState.customers.append(customer)
+	_seat_or_queue(customer)
 	EventBus.emit("customer.entered", {"name": "美食评论家", "recipe_name": recipe.display_name})
+
+
+# ---------- 座位（v2 P2：落座 / 用餐 / 留盘 / 满座排队） ----------
+
+## 有空桌就落座（走进店里），没座就到门口排队。
+func _seat_or_queue(c: Dictionary) -> void:
+	if _try_seat(c):
+		return
+	c["at_door"] = true
+	c["door_timer"] = 10.0
+
+
+func _try_seat(c: Dictionary) -> bool:
+	for s in GameState.seats:
+		if s["customer_id"] == -1 and not s["dirty"]:
+			s["customer_id"] = c["id"]
+			c["seat_id"] = s["id"]
+			c["at_door"] = false
+			c["enter_t"] = 1.0  # 走到座位的入场动画
+			return true
+	return false
+
+
+## 有座位空出来时，门口排队的人补位。
+func _try_seat_waiting() -> void:
+	for c in GameState.customers:
+		if c.get("at_door", false):
+			if _try_seat(c):
+				return
+
+
+## 收桌：清掉脏盘才能接待下一位。
+func clean_seat(seat_id: int) -> void:
+	var s: Dictionary = GameState.seats[seat_id]
+	if not s["dirty"]:
+		return
+	s["dirty"] = false
+	EventBus.emit("seat.cleaned", {"id": seat_id})
+	_try_seat_waiting()
+
+
+func _free_seat(c: Dictionary) -> void:
+	if c.get("seat_id", -1) < 0:
+		return
+	var s: Dictionary = GameState.seats[c["seat_id"]]
+	if s["customer_id"] == c["id"]:
+		s["customer_id"] = -1
+	c["seat_id"] = -1
+	_try_seat_waiting()
+
+
+func _finish_dining(c: Dictionary) -> void:
+	# 吃完走人，桌上留脏盘（不收桌不能接待下一位）
+	var seat_id: int = c.get("seat_id", -1)
+	if seat_id >= 0:
+		var s: Dictionary = GameState.seats[seat_id]
+		if s["customer_id"] == c["id"]:
+			s["customer_id"] = -1
+			s["dirty"] = true
+	GameState.customers.erase(c)
+	EventBus.emit("customer.dined", {"id": c["id"], "name": c["name"]})
+
+
+func _leave_no_seat(c: Dictionary) -> void:
+	# 门口等 10 秒还没座，人走了（小扣口碑）
+	GameState.customers.erase(c)
+	GameState.shop["reputation"] -= 1
+	EventBus.emit("customer.left_no_seat", {"id": c["id"], "name": c["name"]})
+
+
+## 入场走位 / 用餐倒计时 / 门口等座，全部按真实秒推进。
+func _process(delta: float) -> void:
+	if GameState.shop["day_state"] != "serving":
+		return
+	for c in GameState.customers.duplicate():
+		if c["enter_t"] > 0.0:
+			c["enter_t"] = maxf(c["enter_t"] - delta / 0.8, 0.0)
+		if c["state"] == "dining":
+			c["dine_timer"] -= delta
+			if c["dine_timer"] <= 0.0:
+				_finish_dining(c)
+		elif c.get("at_door", false):
+			if _try_seat(c):
+				pass  # 有人翻台了，补位坐下
+			else:
+				c["door_timer"] -= delta
+				if c["door_timer"] <= 0.0:
+					_leave_no_seat(c)
 
 
 # ---------- 耐心 ----------
@@ -136,6 +237,8 @@ func _spawn_critic() -> void:
 func _decay_patience() -> void:
 	var penalty: float = _hygiene_penalty()
 	for c in GameState.customers.duplicate():
+		if c["state"] == "dining":
+			continue  # 用餐中不掉耐心
 		c["patience"] -= PATIENCE_DECAY_PER_MINUTE * penalty
 		if c["patience"] <= 0.0:
 			_angry_leave(c)
@@ -151,6 +254,7 @@ func _hygiene_penalty() -> float:
 
 
 func _angry_leave(c: Dictionary) -> void:
+	_free_seat(c)
 	GameState.customers.erase(c)
 	GameState.shop["reputation"] -= 1
 	if c["regular_id"] != "":
@@ -169,6 +273,8 @@ func take_order(customer_id: int) -> void:
 	var c: Dictionary = _find(customer_id)
 	if c.is_empty() or c["state"] != "waiting":
 		return
+	if c.get("at_door", false) or c["enter_t"] > 0.0:
+		return  # 门口等座 / 还没走到座位，不能点单
 	if GameState.shop["ingredients"] <= 0:
 		EventBus.emit("ingredients.empty")
 		return
@@ -229,7 +335,9 @@ func serve(customer_id: int) -> void:
 				_spawn_customer(_random_recipe(), "客人", "")
 				EventBus.emit("regular.brings_friend", {"name": r["name"]})
 
-	GameState.customers.erase(c)
+	# 上菜后坐下用餐 5~8 秒，吃完留脏盘（v2 P2）
+	c["state"] = "dining"
+	c["dine_timer"] = 5.0 + randf() * 3.0
 	EventBus.emit("customer.served", {"name": c["name"], "earned": earned})
 
 

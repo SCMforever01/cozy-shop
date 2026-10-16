@@ -38,6 +38,7 @@ var _style_rect := Rect2(W - 330, H - 68, 100, 48)
 var _use_sprites: bool = true
 var _food_textures: Dictionary = {}
 var _customer_textures: Dictionary = {}
+var _decor_textures: Dictionary = {}
 var _bg_texture: Texture2D
 var _tutorial_step: int = -1
 var _tutorial_rect := Rect2(W * 0.15, H * 0.28, W * 0.7, H * 0.4)
@@ -77,6 +78,10 @@ const DIRT_SPOTS := [
 	Vector2(430, 610), Vector2(700, 540), Vector2(150, 560), Vector2(600, 260),
 	Vector2(840, 420), Vector2(120, 380), Vector2(520, 430), Vector2(760, 640),
 ]
+## 3 张餐桌（桌面中心点），对应 GameState.seats 的 id
+const SEAT_POS := [Vector2(250, 300), Vector2(620, 300), Vector2(435, 470)]
+## 门口等座区（满座时客人站这里，10 秒没座就走）
+const DOOR_POS := Vector2(740, 545)
 
 
 func _ready() -> void:
@@ -125,6 +130,8 @@ func _load_sprites() -> void:
 	_bg_texture = load("res://assets/sprites/shop_bg.png")
 	for key in ["laozhang", "xiaowang", "lijie", "critic", "g0", "g1", "g2", "g3", "g4", "g5"]:
 		_customer_textures[key] = load("res://assets/sprites/customer_%s.png" % key)
+	for key in ["plant_a", "plant_b", "picture"]:
+		_decor_textures[key] = load("res://assets/sprites/decor_%s.png" % key)
 
 
 func _customer_texture(c: Dictionary) -> Texture2D:
@@ -153,6 +160,7 @@ func _subscribe_events() -> void:
 	EventBus.subscribe("day.summary", _on_day_summary)
 	EventBus.subscribe("event.food_critic", func(_p): _spawn_floater(tr("美食评论家来了！"), Color(0.75, 0.45, 0.95)))
 	EventBus.subscribe("kitchen.burnt", func(_p): _spawn_floater(tr("糊了！食材报废，客人气走了"), Color(0.9, 0.3, 0.25)))
+	EventBus.subscribe("customer.left_no_seat", func(_p): _spawn_floater(tr("没座位，客人走了"), Color(0.85, 0.55, 0.4)))
 	EventBus.subscribe("dish.ready", func(_p): _spawn_floater(tr("✓ 可以上菜了"), Color(0.3, 0.85, 0.4)))
 	EventBus.subscribe("kitchen.blocked", func(p): _spawn_floater(tr("工位被占满了！") if str(p.get("reason", "")) == "occupied" else tr("设备故障中…"), Color(0.7, 0.5, 0.4)))
 	EventBus.subscribe("event.rush_hour", func(_p): _spawn_floater(tr("客流高峰！"), Color(0.95, 0.55, 0.2)))
@@ -238,9 +246,11 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	_draw_floor()
 	_draw_dirt()
+	_draw_decor()
 	_draw_sun()
 	_draw_hud()
 	_draw_customers()
+	_draw_tables()
 	_draw_kitchen()
 	_draw_buttons()
 	_draw_upgrades()
@@ -295,11 +305,30 @@ func _draw_bar(pos: Vector2, width: float, value: float, label: String) -> void:
 
 func _draw_customers() -> void:
 	for i in range(GameState.customers.size()):
-		_draw_customer(GameState.customers[i], _customer_pos(i), i)
+		var c = GameState.customers[i]
+		_draw_customer(c, _customer_draw_pos(c), i)
 
 
-func _customer_pos(i: int) -> Vector2:
-	return Vector2(250, 140 + i * 82)
+## 门口排队序号（0 起）。
+func _door_index(c: Dictionary) -> int:
+	var n := 0
+	for other in GameState.customers:
+		if other.get("at_door", false):
+			if other["id"] == c["id"]:
+				return n
+			n += 1
+	return n
+
+
+## 顾客当前绘制位置：座位上的桌子后方 / 门口等座 / 入场走位中。
+func _customer_draw_pos(c: Dictionary) -> Vector2:
+	var base: Vector2 = DOOR_POS + Vector2(0, -52.0 * _door_index(c))
+	if not c.get("at_door", false) and c.get("seat_id", -1) >= 0:
+		base = SEAT_POS[c["seat_id"]]
+	var target := base + Vector2(0, -40)
+	if c["enter_t"] > 0.0:
+		return (DOOR_POS + Vector2(0, -40)).lerp(target, 1.0 - c["enter_t"])
+	return target
 
 
 func _draw_customer(c: Dictionary, pos: Vector2, idx: int) -> void:
@@ -375,7 +404,11 @@ func _draw_bubble(pos: Vector2, c: Dictionary) -> void:
 	var recipe := Catalog.get_recipe_by_id(c["recipe_id"])
 	var dish_color: Color = DISH_COLORS.get(c["recipe_id"], Color.WHITE)
 	var progress := ""
-	if c["state"] == "waiting":
+	if c["state"] == "dining":
+		progress = tr("（好吃！）")
+	elif c.get("at_door", false):
+		progress = tr("（等座位…）")
+	elif c["state"] == "waiting":
 		progress = tr("（点我接单）")
 	elif c["state"] == "being_served":
 		match c["cook"]["phase"]:
@@ -492,6 +525,73 @@ func _draw_dirt() -> void:
 		draw_circle(p, 17.0, Color(0.42, 0.3, 0.16, 0.32))
 		draw_circle(p + Vector2(11, 7), 9.0, Color(0.42, 0.3, 0.16, 0.28))
 		draw_circle(p + Vector2(-9, 9), 7.0, Color(0.38, 0.26, 0.13, 0.28))
+
+
+## 装修效果可见化（v2 P2）：每级升级立刻看得见。
+func _draw_decor() -> void:
+	var level: int = GameState.shop["upgrades"]["decor"]
+	if level >= 1:
+		# Lv1 绿植点缀
+		_draw_decor_tex("plant_a", Vector2(110, 478), 3)
+		_draw_decor_tex("plant_b", Vector2(872, 210), 3)
+	if level >= 2:
+		# Lv2 墙面挂画
+		_draw_decor_tex("picture", Vector2(352, 62), 3)
+		_draw_decor_tex("picture", Vector2(652, 62), 3)
+	if level >= 3:
+		# Lv3 灯光氛围：暖色光晕
+		draw_circle(Vector2(352, 110), 120, Color(1.0, 0.85, 0.55, 0.10))
+		draw_circle(Vector2(652, 110), 120, Color(1.0, 0.85, 0.55, 0.10))
+		draw_circle(Vector2(435, 330), 150, Color(1.0, 0.85, 0.55, 0.07))
+
+
+func _draw_decor_tex(key: String, pos: Vector2, scale: int) -> void:
+	var tex: Texture2D = _decor_textures.get(key) as Texture2D
+	if tex == null:
+		return
+	var s := 16.0 * scale
+	draw_texture_rect(tex, Rect2(pos.x - s / 2, pos.y - s / 2, s, s), false)
+
+
+## 餐桌：桌椅 + 用餐/脏盘状态（桌子画在顾客前面，像坐在桌后）。
+func _draw_tables() -> void:
+	for i in range(GameState.seats.size()):
+		var seat: Dictionary = GameState.seats[i]
+		var p: Vector2 = SEAT_POS[i]
+		var level: int = GameState.shop["upgrades"]["decor"]
+		var top: Color = Color(0.72, 0.52, 0.32) if level == 0 else Color(0.86, 0.72, 0.52)
+		if level >= 3:
+			top = Color(0.92, 0.80, 0.62)
+		# 椅子
+		draw_rect(Rect2(p + Vector2(-118, -34), Vector2(30, 46)), Color(0.45, 0.32, 0.20), false, 0.0)
+		draw_rect(Rect2(p + Vector2(88, -34), Vector2(30, 46)), Color(0.45, 0.32, 0.20), false, 0.0)
+		# 桌面
+		draw_rect(Rect2(p + Vector2(-80, -18), Vector2(160, 52)), Color(0.35, 0.24, 0.14))
+		draw_rect(Rect2(p + Vector2(-76, -14), Vector2(152, 44)), top)
+		# 桌腿
+		draw_rect(Rect2(p + Vector2(-60, 34), Vector2(12, 22)), Color(0.35, 0.24, 0.14))
+		draw_rect(Rect2(p + Vector2(48, 34), Vector2(12, 22)), Color(0.35, 0.24, 0.14))
+		# 盘子状态：用餐中 / 脏盘待收
+		var diner := _seat_diner(seat)
+		if seat["dirty"]:
+			draw_circle(p + Vector2(0, 8), 17, Color(0.75, 0.75, 0.72))
+			draw_circle(p + Vector2(0, 8), 11, Color(0.62, 0.60, 0.55))
+			draw_circle(p + Vector2(4, 6), 4, Color(0.45, 0.32, 0.18, 0.8))
+			draw_string(_font, p + Vector2(-32, -26), tr("点收桌"), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.95, 0.6, 0.3))
+		elif not diner.is_empty():
+			var ratio: float = clampf(diner["dine_timer"] / 8.0, 0.0, 1.0)
+			draw_circle(p + Vector2(0, 8), 17, Color(0.92, 0.92, 0.88))
+			draw_circle(p + Vector2(0, 8), 11, Color(0.85, 0.72, 0.5))
+			draw_circle(p + Vector2(0, 8), 11 * ratio, Color(0.92, 0.92, 0.88))
+
+
+func _seat_diner(seat: Dictionary) -> Dictionary:
+	if seat["customer_id"] < 0:
+		return {}
+	for c in GameState.customers:
+		if c["id"] == seat["customer_id"] and c["state"] == "dining":
+			return c
+	return {}
 
 
 func _draw_buttons() -> void:
@@ -654,12 +754,22 @@ func _handle_click(pos: Vector2) -> void:
 				_kitchen_system.tap_dish(c["id"])
 			return
 
-	# 客人：点击接单
+	# 脏桌：点桌子收掉脏盘（不收不能接待下一位）
+	for i in range(GameState.seats.size()):
+		var seat: Dictionary = GameState.seats[i]
+		var sp: Vector2 = SEAT_POS[i]
+		if seat["dirty"] and Rect2(sp.x - 95, sp.y - 40, 190, 100).has_point(pos):
+			_customer_system.clean_seat(i)
+			return
+
+	# 客人：点击接单（门口等座的先占座，点不了单）
 	for i in range(GameState.customers.size() - 1, -1, -1):
 		var c = GameState.customers[i]
-		var p := _customer_pos(i)
+		var p := _customer_draw_pos(c)
 		if Rect2(p.x - 45, p.y - 70, 250, 110).has_point(pos):
-			if c["state"] == "waiting":
+			if c.get("at_door", false):
+				_spawn_floater(tr("等座位中…"), Color(0.85, 0.75, 0.5))
+			elif c["state"] == "waiting" and c["enter_t"] <= 0.0:
 				_customer_system.take_order(c["id"])
 			return
 
@@ -681,6 +791,9 @@ func _autoplay_tick() -> void:
 		"serving":
 			if GameState.shop["hygiene"] < 40.0:
 				_hygiene_system.start_mop()
+			for seat in GameState.seats:
+				if seat["dirty"]:
+					_customer_system.clean_seat(seat["id"])
 			for c in GameState.customers.duplicate():
 				match c["state"]:
 					"waiting":

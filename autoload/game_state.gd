@@ -35,6 +35,14 @@ var equipment_broken_ticks: int = 0
 # 在场顾客列表（每个元素为 Dictionary）
 var customers: Array = []
 
+# 座位（v2 P2）：{id, customer_id: int(-1=空), dirty: bool}
+# 脏桌不接待下一位，需点桌收掉脏盘；屏幕位置由 main.gd 的 SEAT_POS 映射。
+var seats: Array = [
+	{"id": 0, "customer_id": -1, "dirty": false},
+	{"id": 1, "customer_id": -1, "dirty": false},
+	{"id": 2, "customer_id": -1, "dirty": false},
+]
+
 # 熟客列表（每个熟客一个字典，可扩展更多熟客）
 var regulars: Array = [
 	{

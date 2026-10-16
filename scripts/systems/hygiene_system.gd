@@ -22,7 +22,11 @@ func teardown() -> void:
 func _on_tick(_minute) -> void:
 	if GameState.shop["day_state"] != "serving":
 		return
-	var decay: float = DECAY_PER_MINUTE * GameState.weather_modifiers["hygiene_decay"]
+	var dirty: int = 0
+	for s in GameState.seats:
+		if s["dirty"]:
+			dirty += 1
+	var decay: float = DECAY_PER_MINUTE * GameState.weather_modifiers["hygiene_decay"] * (1.0 + 0.3 * dirty)
 	GameState.shop["hygiene"] = maxf(GameState.shop["hygiene"] - decay, 0.0)
 
 
