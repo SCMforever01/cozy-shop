@@ -101,6 +101,8 @@ static func get_en() -> Dictionary:
 		"台风歇业": "Close for Typhoon",
 		"台风歇业，库存保住了": "Closed for the typhoon — stock preserved",
 		"食材过期，浪费 %d 份": "%d ingredients spoiled",
+		"声音 开": "Sound On",
+		"声音 关": "Sound Off",
 		"等座位中…": "Waiting for a seat…",
 		"没座位，客人走了": "No seat — the customer left",
 		"（点我上工位）": "(tap to start)",

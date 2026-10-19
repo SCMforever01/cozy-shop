@@ -116,13 +116,13 @@ python3 serve.py 8090
 - **P1 压力感 ✅ 已完成**：做菜改为工位流水线（备菜台/灶台×2/装盘台自动计时，点菜推进一步）；灶台做好不及时取走糊锅（食材报废+客人气走+台面清理 3 秒）；拖地改为 3 秒占用动作（期间做不了菜）；地面污渍随卫生可见。经两轮难度调参（营业日 60 秒→2 分钟、客流 0.22→0.14/分、糊锅宽限 10 秒）。
 - **P2 真实感 ✅ 已完成**：3 张餐桌落座（满座门口排队，10 秒没座走人小扣口碑）；上菜后坐下用餐 5~8 秒；吃完留脏盘（点桌收盘才能接待下一位，脏桌加速脏污）；装修每级看得见（Lv1 桌布+绿植、Lv2 挂画、Lv3 灯光氛围）。测试 `test_seats.gd` 9 例。
 - **P3 决策感 ✅ 已完成**：升级扩到 5 选（拖把/快灶台/座位扩建/优质食材/装修，钱只够买一部分）；食材跨天保存 + 每天结束 20% 过期 + 大份囤货更划算（囤多浪费、囤少断货）；天气溢价进 HUD（雨+20%/暴雨+35%/台风+50%）；台风天二选一「开门搏一把 vs 台风歇业保库存」（歇业不过期），台风权重提到 10% 让玩家真能遇到。测试 `test_shop.gd` 10 例。
+- **音效 + 手机适配 ✅ 已完成**：BGM/雨声/煎炒声循环（自合成 wav）+ 12 个事件音效（Kenney CC0：interface-sounds / digital-audio / music-jingles）+ 声音开关按钮；手机端靠 `stretch/mode=canvas_items + aspect=keep` 等比缩放（刘海安全），小字号上调、点击区 ≥44px。测试 `test_audio.gd` 4 例。合成脚本 `make_audio.py`（会话工具目录，BGM 为 Cmaj7-Am7-Fmaj7-G6 80BPM 24 秒循环）。
 
 ### ⬜ 待做
 
 - 美术完善（更多路人 sprite、天气氛围背景、厨房大件家具）
 - 数值平衡（需实测反馈）
-- 音效/音乐（需素材）
-- 更多内容（菜/客人/事件，数据驱动很快）
+- 更多内容（菜/客人/熟客剧情，数据驱动很快）
 
 ## 7. 文档链接
 
@@ -152,11 +152,16 @@ godot --headless --script res://tests/test_event_bus.gd
 godot --headless --script res://tests/test_satisfaction.gd
 godot --headless --script res://tests/test_font.gd
 godot --headless --script res://tests/test_kitchen.gd   # v2 工位/糊锅/拖地
+godot --headless --script res://tests/test_seats.gd    # v2 落座/用餐/留盘
+godot --headless --script res://tests/test_shop.gd     # v2 采购/过期/升级
+godot --headless --script res://tests/test_audio.gd    # v2 音频加载/循环/开关
 # 冒烟测试（自动演示跑 N 帧）
 godot --headless --quit-after 20000 -- --autoplay
 ```
 
 改渲染/贴图后建议做**网页视觉验证**：导出 Web 构建 → `python3 serve.py <端口>` → 用 Playwright（channel: chrome）截图走一遍「跳过引导 → 采购 → 开门 → 接单 → 做菜」，坐标参考：跳过 (459,469)、采购 (155,546)、开门 (115,676)、第一位客人 (250,140)、第一口锅 (1070,160)。
+
+> 测试坑：`--script` 模式里 `quit()` 写在 `_initialize` 时，`add_child` 入树节点的 `_ready` 不会触发（首帧没跑就退出了），测试里要**手动调 `_ready()`**。
 
 ## 9. Git 提交规范
 

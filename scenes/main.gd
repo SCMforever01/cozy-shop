@@ -38,11 +38,13 @@ var _buy_bulk_rect := Rect2(290, H - 196, 230, 44)
 var _reset_rect := Rect2(W - 110, H - 68, 100, 48)
 var _lang_rect := Rect2(W - 220, H - 68, 100, 48)
 var _style_rect := Rect2(W - 330, H - 68, 100, 48)
+var _sound_rect := Rect2(W - 440, H - 68, 100, 48)
 var _use_sprites: bool = true
 var _food_textures: Dictionary = {}
 var _customer_textures: Dictionary = {}
 var _decor_textures: Dictionary = {}
 var _bg_texture: Texture2D
+var _audio: AudioManager
 var _tutorial_step: int = -1
 var _tutorial_rect := Rect2(W * 0.15, H * 0.28, W * 0.7, H * 0.4)
 var _tutorial_next_rect := Rect2(W * 0.58, H * 0.62, 150, 46)
@@ -90,6 +92,8 @@ const DOOR_POS := Vector2(740, 545)
 func _ready() -> void:
 	_setup_font()
 	_load_sprites()
+	_audio = AudioManager.new()
+	add_child(_audio)
 	_shop_system = ShopSystem.new()
 	_weather_system = WeatherSystem.new()
 	_hygiene_system = HygieneSystem.new()
@@ -165,6 +169,19 @@ func _subscribe_events() -> void:
 	EventBus.subscribe("kitchen.burnt", func(_p): _spawn_floater(tr("糊了！食材报废，客人气走了"), Color(0.9, 0.3, 0.25)))
 	EventBus.subscribe("customer.left_no_seat", func(_p): _spawn_floater(tr("没座位，客人走了"), Color(0.85, 0.55, 0.4)))
 	EventBus.subscribe("ingredients.spoiled", func(p): _spawn_floater(tr("食材过期，浪费 %d 份") % int(p["amount"]), Color(0.85, 0.6, 0.3)))
+	# 音效（v2）
+	EventBus.subscribe("customer.entered", func(_p): _audio.play_sfx("door", -6.0))
+	EventBus.subscribe("customer.served", func(_p): _audio.play_sfx("coin"))
+	EventBus.subscribe("customer.left_angry", func(_p): _audio.play_sfx("deny", -4.0))
+	EventBus.subscribe("customer.left_no_seat", func(_p): _audio.play_sfx("deny", -4.0))
+	EventBus.subscribe("kitchen.burnt", func(_p): _audio.play_sfx("burn", -2.0))
+	EventBus.subscribe("dish.step_done", func(_p): _audio.play_sfx("pickup", -6.0))
+	EventBus.subscribe("dish.ready", func(_p): _audio.play_sfx("accept", -4.0))
+	EventBus.subscribe("upgrade.bought", func(_p): _audio.play_sfx("upgrade", -4.0))
+	EventBus.subscribe("hygiene.mopped", func(_p): _audio.play_sfx("mop", -8.0))
+	EventBus.subscribe("day.summary", func(_p): _audio.play_sfx("summary", -6.0))
+	EventBus.subscribe("clock.day_started", func(_p): _audio.play_sfx("open", -10.0))
+	EventBus.subscribe("weather.changed", func(id): _audio.play_sfx("typhoon", -2.0) if str(id) == "typhoon" else null)
 	EventBus.subscribe("dish.ready", func(_p): _spawn_floater(tr("✓ 可以上菜了"), Color(0.3, 0.85, 0.4)))
 	EventBus.subscribe("kitchen.blocked", func(p): _spawn_floater(tr("工位被占满了！") if str(p.get("reason", "")) == "occupied" else tr("设备故障中…"), Color(0.7, 0.5, 0.4)))
 	EventBus.subscribe("event.rush_hour", func(_p): _spawn_floater(tr("客流高峰！"), Color(0.95, 0.55, 0.2)))
@@ -218,6 +235,15 @@ func _spawn_rain() -> void:
 
 func _process(delta: float) -> void:
 	_t += delta
+
+	# 氛围声：雨声（天气）/ 煎炒声（灶台开工）
+	_audio.set_rain(GameState.weather_id in ["rain", "storm", "typhoon"])
+	var cooking := false
+	for s in _kitchen_system.stations:
+		if s["phase"] == "cooking":
+			cooking = true
+			break
+	_audio.set_sizzle(cooking)
 
 	for f in _floaters:
 		f["age"] += delta
@@ -431,12 +457,12 @@ func _draw_bubble(pos: Vector2, c: Dictionary) -> void:
 	draw_rect(Rect2(pos, Vector2(bw, bh)), Color(1, 1, 1, 0.93))
 	draw_rect(Rect2(pos, Vector2(bw, bh)), Color(0.6, 0.55, 0.5), false, 1.5)
 	_draw_food(pos + Vector2(13, bh / 2), 7, c["recipe_id"], dish_color)
-	draw_string(_font, pos + Vector2(28, bh - 11), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(0.1, 0.1, 0.1))
+	draw_string(_font, pos + Vector2(28, bh - 11), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.1, 0.1, 0.1))
 
 
 func _draw_kitchen() -> void:
 	draw_string(_font, Vector2(W * 0.72 + 40, 110), tr("厨房"), HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color(0.45, 0.35, 0.25))
-	draw_string(_font, Vector2(W * 0.72 + 40, 134), tr("点菜推进一步 · 灶台做好趁热取走，晚了会糊锅"), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.55, 0.5, 0.45))
+	draw_string(_font, Vector2(W * 0.72 + 40, 134), tr("点菜推进一步 · 灶台做好趁热取走，晚了会糊锅"), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.55, 0.5, 0.45))
 	for i in range(_kitchen_system.stations.size()):
 		_draw_station(_kitchen_system.stations[i], _station_pos(i))
 	# 待处理的菜：等工位的 / 做完待上菜的（在工位上的菜由工位卡片绘制）
@@ -490,14 +516,14 @@ func _draw_station(s: Dictionary, pos: Vector2) -> void:
 				_draw_bar_bg(rect.position + Vector2(70, 62), 76, 9)
 				var prog: float = 1.0 - s["timer"] / maxf(step["sec"], 0.01)
 				_draw_bar_fill(rect.position + Vector2(70, 62), 76, 9, prog, Color(0.35, 0.75, 0.95))
-				draw_string(_font, rect.position + Vector2(70, 92), tr("制作中…"), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.7, 0.75, 0.85))
+				draw_string(_font, rect.position + Vector2(70, 92), tr("制作中…"), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0.7, 0.75, 0.85))
 			else:
 				var pulse := 0.6 + 0.4 * absf(sin(_t * 5.0))
 				draw_string(_font, rect.position + Vector2(70, 78), tr("✓ 点我取走"), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0.3, 0.9, 0.4, pulse))
 				if s["burn_timer"] > 0.0:
 					_draw_bar_bg(rect.position + Vector2(70, 88), 76, 8)
 					_draw_bar_fill(rect.position + Vector2(70, 88), 76, 8, s["burn_timer"] / KitchenSystem.BURN_GRACE, Color(0.9, 0.25, 0.2))
-					draw_string(_font, rect.position + Vector2(12, 108), tr("快糊了！"), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1.0, 0.35, 0.25, pulse))
+					draw_string(_font, rect.position + Vector2(12, 108), tr("快糊了！"), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1.0, 0.35, 0.25, pulse))
 
 
 func _draw_waiting_dish(c: Dictionary, pos: Vector2) -> void:
@@ -507,11 +533,11 @@ func _draw_waiting_dish(c: Dictionary, pos: Vector2) -> void:
 		draw_arc(pos, 31 * pulse, 0, TAU, 24, Color(0.3, 0.9, 0.4, 0.6), 3.0)
 		draw_circle(pos, 25, Color(0.96, 0.96, 0.96, 0.95))
 		_draw_food(pos, 17, c["recipe_id"], dish_color)
-		draw_string(_font, pos + Vector2(-26, 46), tr("✓ 上菜"), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.2, 0.75, 0.35))
+		draw_string(_font, pos + Vector2(-26, 46), tr("✓ 上菜"), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0.2, 0.75, 0.35))
 	else:
 		draw_circle(pos, 25, Color(0.22, 0.22, 0.28, 0.92))
 		_draw_food(pos, 17, c["recipe_id"], dish_color)
-		draw_string(_font, pos + Vector2(-26, 46), tr("上工位"), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.85, 0.8, 0.7))
+		draw_string(_font, pos + Vector2(-26, 46), tr("上工位"), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0.85, 0.8, 0.7))
 
 
 func _draw_bar_bg(pos: Vector2, w: float, h: float) -> void:
@@ -581,7 +607,7 @@ func _draw_tables() -> void:
 			draw_circle(p + Vector2(0, 8), 17, Color(0.75, 0.75, 0.72))
 			draw_circle(p + Vector2(0, 8), 11, Color(0.62, 0.60, 0.55))
 			draw_circle(p + Vector2(4, 6), 4, Color(0.45, 0.32, 0.18, 0.8))
-			draw_string(_font, p + Vector2(-32, -26), tr("点收桌"), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.95, 0.6, 0.3))
+			draw_string(_font, p + Vector2(-32, -26), tr("点收桌"), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0.95, 0.6, 0.3))
 		elif not diner.is_empty():
 			var ratio: float = clampf(diner["dine_timer"] / 8.0, 0.0, 1.0)
 			draw_circle(p + Vector2(0, 8), 17, Color(0.92, 0.92, 0.88))
@@ -612,6 +638,7 @@ func _draw_buttons() -> void:
 	_draw_button(_reset_rect, tr("重置进度"), true)
 	_draw_button(_lang_rect, "EN" if not _language_system.is_en() else "中文", true)
 	_draw_button(_style_rect, "像素" if _use_sprites else "代码", true)
+	_draw_button(_sound_rect, tr("声音 开") if _audio.enabled else tr("声音 关"), true)
 
 
 func _draw_upgrades() -> void:
@@ -694,6 +721,7 @@ func _draw_tutorial() -> void:
 
 
 func _handle_click(pos: Vector2) -> void:
+	_audio.play_sfx("tap", -10.0)
 	if _tutorial_step >= 0:
 		if _tutorial_next_rect.has_point(pos):
 			_tutorial_step += 1
@@ -710,6 +738,9 @@ func _handle_click(pos: Vector2) -> void:
 		return
 	if _style_rect.has_point(pos):
 		_use_sprites = not _use_sprites
+		return
+	if _sound_rect.has_point(pos):
+		_audio.toggle()
 		return
 	if GameState.shop["day_state"] != "closed" and _buy_ingredients_rect.has_point(pos):
 		_shop_system.buy_ingredients(5, 15)
@@ -848,7 +879,7 @@ func _weather_text() -> String:
 	var w: WeatherType = Catalog.get_weather()[GameState.weather_id]
 	var premium: float = GameState.weather_modifiers.get("price", 1.0)
 	if premium > 1.0:
-		return "%s(单价+%d%%)" % [tr(w.display_name), int((premium - 1.0) * 100.0)]
+		return "%s(单价+%d%%)" % [tr(w.display_name), roundi((premium - 1.0) * 100.0)]
 	return tr(w.display_name)
 
 
