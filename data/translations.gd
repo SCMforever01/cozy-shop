@@ -156,6 +156,7 @@ static func get_en() -> Dictionary:
 		"客人进店点单，点客人「接单」": "Customers order; click a customer to take the order",
 		"点厨房里的菜上工位，步骤自动计时；灶台做好趁热取走，晚了糊锅": "Tap a dish to put it on a station; steps run on timers. Take stove food before it burns",
 		"做完变发光盘子，点它「上菜」收钱": "When done it becomes a glowing plate; click to serve",
+		"多线忙不过来时按顺序救火：收桌 → 上菜 → 取锅 → 接单 → 派工位": "Busy? Triage: clear tables → serve → save pots → orders → dispatch",
 		"地面变脏点「拖地」（要花 3 秒，期间做不了菜），脏店客人没耐心": "Mop dirty floors (takes 3s and blocks cooking); a dirty shop annoys customers",
 		"每天结束自动存档，开店前点绿色按钮升级设备": "Auto-save each day; upgrade before opening",
 	}
