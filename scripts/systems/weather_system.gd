@@ -33,7 +33,7 @@ func _apply_weather(id: String) -> void:
 		"environment": w.environment_modifier,
 		"price": w.price_modifier,
 	}
-	GameState.shop["environment"] = 100.0 + w.environment_modifier + GameState.shop["upgrades"]["decor"] * 10.0
+	GameState.refresh_environment(w.environment_modifier)
 	EventBus.emit("weather.changed", id)
 
 

@@ -33,7 +33,7 @@ func _on_tick(_minute) -> void:
 func _process(delta: float) -> void:
 	if mopping_timer <= 0.0:
 		return
-	mopping_timer -= delta
+	mopping_timer -= delta * GameClock.speed_multiplier  # 与游戏时钟同步变速
 	if mopping_timer <= 0.0:
 		mopping_timer = 0.0
 		_finish_mop()
@@ -68,8 +68,3 @@ func _finish_mop() -> void:
 	var restore: float = MOP_BASE + GameState.shop["upgrades"]["mop"] * 10.0
 	GameState.shop["hygiene"] = minf(GameState.shop["hygiene"] + restore, 100.0)
 	EventBus.emit("hygiene.mopped", {})
-
-
-## 地面污渍数量（渲染用）：越脏越多，最多 8 处。
-func dirt_spots() -> int:
-	return clampi(int((100.0 - GameState.shop["hygiene"]) / 12.0), 0, 8)

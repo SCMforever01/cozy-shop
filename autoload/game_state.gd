@@ -50,6 +50,25 @@ var seats: Array = [
 func seat_capacity() -> int:
 	return mini(3 + int(shop["upgrades"].get("seat", 0)), seats.size())
 
+
+## 地面污渍数量（渲染用）：越脏越多，最多 8 处。
+func dirt_spots() -> int:
+	return clampi(int((100.0 - shop["hygiene"]) / 12.0), 0, 8)
+
+
+## 按 id 查在场顾客（工位卡片画菜用），查不到返回空字典。
+func get_customer_by_id(customer_id: int) -> Dictionary:
+	for c in customers:
+		if c["id"] == customer_id:
+			return c
+	return {}
+
+
+## 环境值 = 100 + 天气加成 + 装修等级×10。
+## 天气切换（WeatherSystem）和购买装修升级（ShopSystem）时调用。
+func refresh_environment(weather_modifier: float) -> void:
+	shop["environment"] = 100.0 + weather_modifier + shop["upgrades"]["decor"] * 10.0
+
 # 熟客列表（每个熟客一个字典，可扩展更多熟客）
 var regulars: Array = [
 	{

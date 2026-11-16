@@ -53,7 +53,10 @@ func buy_upgrade(category: String) -> void:
 		return
 	GameState.shop["money"] -= cost
 	GameState.shop["upgrades"][category] = level + 1
-	EventBus.emit("upgrade.bought", {"name": info["name"], "level": level + 1})
+	if category == "decor":
+		# 装修升级即时提升环境，不用等到第二天
+		GameState.refresh_environment(GameState.weather_modifiers["environment"])
+	EventBus.emit("upgrade.bought", {"category": category, "name": info["name"], "level": level + 1})
 
 
 ## 采购食材：大份单价更低，但囤多了过期会浪费（v2 P3 采购取舍）。
