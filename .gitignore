@@ -23,3 +23,6 @@ android/**/*.import
 
 # 安卓 APK 不入库（下载见 GitHub Releases）
 /*.apk
+
+# 素材生成器的输出目录（源码是 tools/make_art.py，产物直接覆盖 assets/sprites/）
+assets/sprites_v2/

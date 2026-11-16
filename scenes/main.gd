@@ -22,6 +22,8 @@ var _audio: AudioController
 
 
 func _ready() -> void:
+	# 像素素材统一最近邻缩放（防糊）
+	texture_filter = TEXTURE_FILTER_NEAREST
 	_register_systems()
 	_build_views()
 

@@ -18,6 +18,7 @@ var _rain: Array = []             # {x, y, speed} 雨滴（画在场景上、UI 
 var _customer_textures: Dictionary = {}
 var _decor_textures: Dictionary = {}
 var _bg_texture: Texture2D
+var _table_tex: Texture2D
 
 
 func _ready() -> void:
@@ -150,6 +151,8 @@ func _customer_texture(c: Dictionary) -> Texture2D:
 
 
 func _draw_customer(c: Dictionary, pos: Vector2, idx: int) -> void:
+	# 待机浮动：轻微上下摆 + 左右摇，让画面活起来
+	pos += Vector2(sin(_t * 2.0 + idx * 1.7) * 1.2, sin(_t * 3.1 + idx * 2.3) * 1.6)
 	var radius := 32.0
 	var mood := clampf(c["patience"] / c["patience_max"], 0.0, 1.0)
 	var body: Color = CUSTOMER_COLORS[idx % CUSTOMER_COLORS.size()]
@@ -168,7 +171,7 @@ func _draw_customer(c: Dictionary, pos: Vector2, idx: int) -> void:
 	var tex: Texture2D = _customer_texture(c)
 	var sprite_mode := GameLayout.use_sprites and tex != null
 	if sprite_mode:
-		var s := r * 1.5
+		var s := r * 1.9
 		draw_circle(pos + Vector2(0, radius * 0.66), radius * 0.62, Color(0, 0, 0, 0.14))
 		draw_texture_rect(tex, Rect2(pos.x - s / 2, pos.y - s / 2, s, s), false)
 		# 心情角标（小圆徽章）
@@ -263,34 +266,22 @@ func _draw_bubble(pos: Vector2, c: Dictionary) -> void:
 
 # ---------- 餐桌 ----------
 
-## 餐桌：圆角木纹桌面 + 阴影 + 椅子 + 用餐/脏盘状态徽章。
+## 餐桌：生成的桌椅组合贴图 + 用餐/脏盘状态。
 func _draw_tables() -> void:
+	if _table_tex == null:
+		_table_tex = load("res://assets/sprites/table_set.png")
 	for i in range(GameState.seat_capacity()):
 		var seat: Dictionary = GameState.seats[i]
 		var p: Vector2 = GameLayout.SEAT_POS[i]
-		var level: int = GameState.shop["upgrades"]["decor"]
-		var top: Color = Color(0.68, 0.47, 0.28) if level == 0 else Color(0.80, 0.62, 0.40)
-		if level >= 3:
-			top = Color(0.88, 0.72, 0.50)
-		# 椅子（靠背 + 阴影）
-		for cx in [-118, 88]:
-			UITheme.panel(self, Rect2(p + Vector2(cx, -34), Vector2(30, 46)), Color(0.42, 0.28, 0.16), 8, Color(0, 0, 0, 0.18), 0, 4, Vector2(0, 2))
-			UITheme.panel(self, Rect2(p + Vector2(cx + 5, -30), Vector2(20, 12)), Color(0.52, 0.36, 0.21), 5)
-		# 桌腿
-		draw_rect(Rect2(p + Vector2(-58, 32), Vector2(13, 24)), Color(0.32, 0.21, 0.12))
-		draw_rect(Rect2(p + Vector2(45, 32), Vector2(13, 24)), Color(0.32, 0.21, 0.12))
-		# 桌面（圆角 + 顶部高光 + 桌沿）
-		UITheme.panel(self, Rect2(p + Vector2(-82, -20), Vector2(164, 56)), Color(0, 0, 0, 0.20), 12, Color(0, 0, 0, 0), 0, 6, Vector2(0, 4))
-		UITheme.panel(self, Rect2(p + Vector2(-80, -22), Vector2(160, 54)), top.darkened(0.22), 12)
-		UITheme.panel(self, Rect2(p + Vector2(-76, -18), Vector2(152, 44)), top, 10)
-		UITheme.panel(self, Rect2(p + Vector2(-70, -15), Vector2(140, 10)), top.lightened(0.18), 6)
+		# 桌椅组合（含阴影），中心对齐座位点
+		draw_texture_rect(_table_tex, Rect2(p + Vector2(-120, -40), Vector2(240, 100)), false)
 		# 盘子状态：用餐中 / 脏盘待收
 		var diner := _seat_diner(seat)
 		if seat["dirty"]:
 			draw_circle(p + Vector2(0, 8), 17, Color(0.78, 0.78, 0.75))
 			draw_circle(p + Vector2(0, 8), 11, Color(0.64, 0.62, 0.57))
 			draw_circle(p + Vector2(4, 6), 4, Color(0.45, 0.32, 0.18, 0.8))
-			UITheme.badge(self, Rect2(p + Vector2(-38, -44), Vector2(76, 20)), tr("点收桌"), font, UITheme.ACCENT.darkened(0.15), Color.WHITE, 13)
+			UITheme.badge(self, Rect2(p + Vector2(-38, -48), Vector2(76, 20)), tr("点收桌"), font, UITheme.ACCENT.darkened(0.15), Color.WHITE, 13)
 		elif not diner.is_empty():
 			var ratio: float = clampf(diner["dine_timer"] / 8.0, 0.0, 1.0)
 			draw_circle(p + Vector2(0, 8), 17, Color(0.93, 0.93, 0.89))

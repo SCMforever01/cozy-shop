@@ -6,6 +6,7 @@ extends UIView
 
 ## 由主场景注入：要读工位实时状态。
 var kitchen: KitchenSystem
+var _icons: Dictionary = {}
 
 
 func _draw() -> void:
@@ -35,6 +36,11 @@ func _draw_station(s: Dictionary, pos: Vector2) -> void:
 	# 玻璃卡片：深棕 + 亮边 + 投影
 	UITheme.panel(self, rect, Color(0.19, 0.15, 0.14, 0.93), 14, Color(1, 1, 1, 0.12), 1, 8, Vector2(0, 4))
 	UITheme.label(self, font, rect.position + Vector2(12, 24), tr(s["name"]), 15, Color(1.0, 0.93, 0.82))
+	# 工位设备图标（左上角）
+	if _icons.is_empty():
+		for k in ["prep", "stove", "plate"]:
+			_icons[k] = load("res://assets/sprites/icon_%s.png" % k)
+	draw_texture_rect(_icons.get(s["kind"]) as Texture2D, Rect2(rect.position + Vector2(10, 30), Vector2(22, 22)), false)
 	match s["phase"]:
 		"":
 			UITheme.label(self, font, rect.position + Vector2(12, 72), tr("空闲"), 14, Color(0.58, 0.58, 0.64))
