@@ -33,7 +33,10 @@ func _draw() -> void:
 	# 操作流程提示：居中浮在控制台空区
 	var hint := tr("接单 → 上工位 → 取走 → 上菜")
 	var hint_w: float = font.get_string_size(hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x + 28
-	UITheme.badge(self, Rect2(Vector2(540 + (295 - hint_w) / 2.0, GameLayout.H - 34), Vector2(hint_w, 24)), hint, font, Color(0.98, 0.94, 0.86, 0.92), UITheme.INK_SOFT, 15)
+	UITheme.badge(self, Rect2(Vector2(540 + (295 - hint_w) / 2.0, GameLayout.H - 38), Vector2(hint_w, 24)), hint, font, Color(0.98, 0.94, 0.86, 0.92), UITheme.INK_SOFT, 15)
+	var keys := tr("空格=分诊  1~4=工位  M=拖地  O=开门  C=打烊  B=采购")
+	var keys_w: float = font.get_string_size(keys, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x + 22
+	UITheme.badge(self, Rect2(Vector2(540 + (295 - keys_w) / 2.0, GameLayout.H - 64), Vector2(keys_w, 20)), keys, font, Color(0.30, 0.24, 0.20, 0.78), Color(0.92, 0.86, 0.74), 12)
 	_draw_upgrades()
 
 

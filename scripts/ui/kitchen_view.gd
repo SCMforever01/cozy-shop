@@ -75,8 +75,19 @@ func _draw_waiting_dish(c: Dictionary, pos: Vector2) -> void:
 		draw_arc(pos, 31 * pulse, 0, TAU, 24, Color(0.3, 0.9, 0.4, 0.55), 3.0)
 		UITheme.panel(self, Rect2(pos - Vector2(25, 25), Vector2(50, 50)), Color(0.97, 0.96, 0.92), 25, Color(0, 0, 0, 0.2), 1, 5, Vector2(0, 3))
 		_draw_food(pos, 15, c["recipe_id"])
-		UITheme.badge(self, Rect2(pos + Vector2(-30, 30), Vector2(60, 18)), tr("✓ 上菜"), font, UITheme.GREEN.darkened(0.15), Color.WHITE, 12)
+		UITheme.badge(self, Rect2(pos + Vector2(-30, 28), Vector2(60, 18)), tr("✓ 上菜"), font, UITheme.GREEN.darkened(0.15), Color.WHITE, 12)
 	else:
 		UITheme.panel(self, Rect2(pos - Vector2(25, 25), Vector2(50, 50)), Color(0.28, 0.24, 0.24, 0.92), 25, Color(0, 0, 0, 0.25), 1, 5, Vector2(0, 3))
 		_draw_food(pos, 15, c["recipe_id"])
-		UITheme.badge(self, Rect2(pos + Vector2(-30, 30), Vector2(60, 18)), tr("上工位"), font, Color(0.42, 0.36, 0.30), Color(1, 0.95, 0.85), 12)
+		# 标注这道菜下一步该去的工位（备菜/灶台/装盘），对应关系一目了然
+		var recipe := Catalog.get_recipe_by_id(c["recipe_id"])
+		var target := tr("工位")
+		if c["make_progress"] < recipe.steps.size():
+			match recipe.steps[c["make_progress"]]["station"]:
+				"prep":
+					target = tr("备菜")
+				"stove":
+					target = tr("灶台")
+				"plate":
+					target = tr("装盘")
+		UITheme.badge(self, Rect2(pos + Vector2(-36, 28), Vector2(72, 18)), tr("→%s") % target, font, Color(0.42, 0.36, 0.30), Color(1, 0.95, 0.85), 12)

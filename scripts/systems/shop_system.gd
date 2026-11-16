@@ -40,6 +40,7 @@ func _on_day_ended(day) -> void:
 func open_shop() -> void:
 	if GameState.shop["day_state"] == "preparing":
 		GameState.shop["day_state"] = "serving"
+		EventBus.emit("shop.opened", {})
 
 
 ## 购买设备升级。category 见 Catalog.get_upgrades()。

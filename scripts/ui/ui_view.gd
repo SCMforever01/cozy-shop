@@ -4,9 +4,17 @@ extends Node2D
 ## 视觉语言统一走 UITheme（圆角面板/阴影/胶囊条），各子视图只负责自己那层的构图。
 
 
-const FONT_PATH := "res://assets/fonts/NotoSansSC-Static.ttf"
+## 像素字体（fusion-pixel 子集，覆盖游戏全部用字）；缺字回退 NotoSansSC。
+const FONT_PATH := "res://assets/fonts/fusion_pixel.ttf"
+const FALLBACK_FONT_PATH := "res://assets/fonts/NotoSansSC-Static.ttf"
 
 var font: Font = preload(FONT_PATH)
+
+
+func _init() -> void:
+	var ff := font as FontFile
+	if ff != null and ff.fallbacks.is_empty():
+		ff.fallbacks = [load(FALLBACK_FONT_PATH)]
 ## 动画时钟（秒），子类画脉冲/蒸汽等效果直接用。
 var _t: float = 0.0
 

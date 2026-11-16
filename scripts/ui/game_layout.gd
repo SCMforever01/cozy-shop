@@ -60,9 +60,9 @@ static func door_index(customers: Array, c: Dictionary) -> int:
 	return n
 
 
-## 门口排队位置：沿对角线错位排开（避免人塔堆叠 + 气泡不出厨房分界线）。
+## 门口候位栏：水平一排、人距 ≥1 身位（70px），不出厨房分界线、不压底部控制台。
 static func door_queue_pos(index: int) -> Vector2:
-	return Vector2(650.0 - 58.0 * index, 445.0 + 27.0 * index)
+	return Vector2(660.0 - 70.0 * index, 462.0 + 8.0 * index)
 
 
 ## 顾客当前绘制位置：座位上的桌子后方 / 门口等座（错位队列）/ 入场走位中。
@@ -94,9 +94,10 @@ static func station_hit_rect(i: int) -> Rect2:
 	return Rect2(p.x - 78, p.y - 62, 156, 128)
 
 
-## 第 i 个待处理菜（等工位 / 待上菜）的位置。
+## 第 i 个待处理菜（等工位 / 待上菜）的位置：厨房区顶部"待取餐架"，
+## 避开控制台面板遮挡区和门口队列。
 static func waiting_pos(i: int) -> Vector2:
-	return Vector2(985 + i * 72, 615)
+	return Vector2(985 + i * 72, 175)
 
 
 ## 待处理菜的点击区域。

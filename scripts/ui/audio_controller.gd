@@ -4,8 +4,10 @@ extends Node
 ## 加一条音效映射 = 加一行数据。底层播放由 AudioManager 负责。
 
 
-## 事件 -> 音效：key 为 AudioManager.SFX 的键，volume 为音量（dB），
-## only 为可选过滤：payload 与之相等才播（用于 weather.changed 只在台风时播）。
+## 事件 -> 音效：key 为 AudioManager.SFX 的键，volume 为音量（dB）。
+## only 为可选过滤：payload 与之相等才播（如 weather.changed 只在台风时播）。
+## match 为可选字段过滤：payload 字段等于 value 才播（如按熟客名触发专属语音）。
+## chance 为可选触发概率（0~1，如上菜满意语音只在部分时候播）。
 const SFX_EVENTS := [
 	{"event": "customer.entered", "key": "door", "volume": -6.0},
 	{"event": "customer.served", "key": "coin", "volume": 0.0},
@@ -19,6 +21,15 @@ const SFX_EVENTS := [
 	{"event": "day.summary", "key": "summary", "volume": -6.0},
 	{"event": "clock.day_started", "key": "open", "volume": -10.0},
 	{"event": "weather.changed", "key": "typhoon", "volume": -2.0, "only": "typhoon"},
+	# 角色语音（Breeze TTS）
+	{"event": "shop.opened", "key": "voice_welcome", "volume": -2.0},
+	{"event": "customer.entered", "key": "voice_laozhang", "volume": -3.0, "match": {"key": "name", "value": "老张"}},
+	{"event": "customer.entered", "key": "voice_xiaowang", "volume": -3.0, "match": {"key": "name", "value": "小王"}},
+	{"event": "customer.entered", "key": "voice_lijie", "volume": -3.0, "match": {"key": "name", "value": "李姐"}},
+	{"event": "customer.entered", "key": "voice_critic", "volume": -3.0, "match": {"key": "name", "value": "美食评论家"}},
+	{"event": "regular.celebrate", "key": "voice_birthday", "volume": -2.0},
+	{"event": "customer.served", "key": "voice_thanks", "volume": -4.0, "chance": 0.3},
+	{"event": "customer.left_angry", "key": "voice_angry", "volume": -3.0, "chance": 0.5},
 ]
 
 var audio: AudioManager
@@ -69,5 +80,11 @@ func play_sfx(key: String, volume_db: float = 0.0) -> void:
 func _make_sfx_handler(entry: Dictionary) -> Callable:
 	return func(payload):
 		if entry.has("only") and str(payload) != str(entry["only"]):
+			return
+		if entry.has("match"):
+			var m: Dictionary = entry["match"]
+			if not (payload is Dictionary) or str(payload.get(m["key"], "")) != str(m["value"]):
+				return
+		if entry.has("chance") and randf() > entry["chance"]:
 			return
 		audio.play_sfx(entry["key"], entry["volume"])

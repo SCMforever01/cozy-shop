@@ -276,11 +276,9 @@ func _draw_customer(c: Dictionary, pos: Vector2, idx: int) -> void:
 	var bar_dy: float = -52.0 if sprite_mode else -72.0
 	UITheme.progress(self, Rect2(pos + Vector2(-radius, bar_dy), Vector2(bar_w, 8)), mood, _patience_color(mood))
 
-	# 门口等座倒计时：金色递减胶囊 + 秒数徽章（让玩家看到谁快走了）
+	# 门口等座倒计时：秒数徽章挂在耐心条右端（跟条走，最紧急信息最显眼）
 	if c.get("at_door", false):
-		var ratio: float = clampf(c["door_timer"] / CustomerSystem.DOOR_WAIT, 0.0, 1.0)
-		UITheme.progress(self, Rect2(pos + Vector2(-radius, bar_dy + 11), Vector2(bar_w, 7)), ratio, UITheme.GOLD)
-		UITheme.badge(self, Rect2(pos + Vector2(radius + 6, bar_dy + 8), Vector2(34, 15)), "%ds" % ceili(c["door_timer"]), font, Color(0.45, 0.32, 0.10, 0.9), UITheme.GOLD, 11)
+		UITheme.badge(self, Rect2(pos + Vector2(radius + 4, bar_dy - 3), Vector2(34, 15)), "%ds" % ceili(c["door_timer"]), font, Color(0.45, 0.32, 0.10, 0.92), UITheme.GOLD, 11)
 
 	# 点单气泡：队首完整显示，其余排队客人收成小徽章（避免人塔气泡互叠）
 	if c.get("at_door", false) and GameLayout.door_index(GameState.customers, c) > 0:
@@ -289,12 +287,11 @@ func _draw_customer(c: Dictionary, pos: Vector2, idx: int) -> void:
 		_draw_bubble(pos + Vector2(radius + 16, -radius), c)
 
 
-## 排队小徽章：菜品图标 + 剩余秒数（队首以外的等座客人）。
+## 排队小徽章：只显示菜品图标（秒数挂在耐心条右端，避免三层叠压）。
 func _draw_queue_chip(pos: Vector2, c: Dictionary, radius: float) -> void:
-	var chip := Rect2(pos + Vector2(18, -radius - 12), Vector2(70, 26))
-	UITheme.panel(self, chip, UITheme.CREAM, 9, Color(0.35, 0.27, 0.20, 0.35), 1, 4, Vector2(0, 2))
-	_draw_food(chip.position + Vector2(15, 13), 8, c["recipe_id"])
-	UITheme.label(self, font, chip.position + Vector2(32, 18), "%ds" % ceili(c["door_timer"]), 12, UITheme.INK_SOFT)
+	var chip := Rect2(pos + Vector2(20, -radius - 10), Vector2(30, 24))
+	UITheme.panel(self, chip, UITheme.CREAM, 8, Color(0.35, 0.27, 0.20, 0.35), 1, 3, Vector2(0, 2))
+	_draw_food(chip.position + Vector2(15, 12), 8, c["recipe_id"])
 
 
 ## 点单气泡：米白圆角卡片 + 投影 + 小尾巴 + 食物图标框。

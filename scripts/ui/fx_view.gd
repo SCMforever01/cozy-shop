@@ -31,6 +31,7 @@ const TOASTS := [
 const FLOATER_LIFETIME := 1.2
 
 var _floaters: Array = []  # {text, pos, age, color}
+var _taps: Array = []      # 点击反馈：{pos, age} 扩散圆环
 var _bound: Array = []     # {event, callable}，退出时取消订阅用
 
 
@@ -52,6 +53,11 @@ func _exit_tree() -> void:
 	EventBus.unsubscribe("customer.entered", _on_customer_entered)
 	EventBus.unsubscribe("season.changed", _on_season_changed)
 	EventBus.unsubscribe("kitchen.blocked", _on_kitchen_blocked)
+
+
+## 点击反馈：在点击处画一圈扩散涟漪（任何点击都有即时响应感）。
+func spawn_tap(pos: Vector2) -> void:
+	_taps.append({"pos": pos, "age": 0.0})
 
 
 ## 生成一条飘字提示（其他层也调用它，如「已读档」「进度已重置」）。
@@ -111,9 +117,17 @@ func _animate(delta: float) -> void:
 		f["age"] += delta
 		f["pos"].y -= 45.0 * delta
 	_floaters = _floaters.filter(func(f): return f["age"] < FLOATER_LIFETIME)
+	for t in _taps:
+		t["age"] += delta
+	_taps = _taps.filter(func(t): return t["age"] < 0.35)
 
 
 func _draw() -> void:
+	# 点击涟漪（扩散圆环）
+	for t in _taps:
+		var k: float = t["age"] / 0.35
+		var r: float = 10.0 + 26.0 * k
+		draw_arc(t["pos"], r, 0, TAU, 24, Color(1, 1, 1, 0.55 * (1.0 - k)), 2.5)
 	for f in _floaters:
 		var alpha := clampf(1.0 - f["age"] / FLOATER_LIFETIME, 0.0, 1.0)
 		var c: Color = f["color"]

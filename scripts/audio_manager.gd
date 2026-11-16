@@ -16,6 +16,15 @@ const SFX := {
 	"typhoon": "res://assets/audio/typhoon.ogg",
 	"mop": "res://assets/audio/mop.ogg",
 	"deny": "res://assets/audio/deny.ogg",
+	# 角色语音（Breeze TTS 生成，见 tools/gen_voices.py）
+	"voice_welcome": "res://assets/audio/voice_welcome.wav",
+	"voice_laozhang": "res://assets/audio/voice_laozhang.wav",
+	"voice_xiaowang": "res://assets/audio/voice_xiaowang.wav",
+	"voice_lijie": "res://assets/audio/voice_lijie.wav",
+	"voice_critic": "res://assets/audio/voice_critic.wav",
+	"voice_birthday": "res://assets/audio/voice_birthday.wav",
+	"voice_thanks": "res://assets/audio/voice_thanks.wav",
+	"voice_angry": "res://assets/audio/voice_angry.wav",
 }
 
 var enabled: bool = true
@@ -56,7 +65,7 @@ func _make_loop(path: String) -> AudioStreamPlayer:
 
 
 func play_sfx(key: String, volume_db: float = 0.0) -> void:
-	if not enabled or not _streams.has(key):
+	if not enabled or _streams.get(key) == null:
 		return
 	for p in _pool:
 		if not p.playing:
