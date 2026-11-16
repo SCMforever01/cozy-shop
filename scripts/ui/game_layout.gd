@@ -71,10 +71,10 @@ static func customer_draw_pos(customers: Array, c: Dictionary) -> Vector2:
 	return target
 
 
-## 顾客（头像 + 点单气泡）的点击区域。
+## 顾客（头像 + 点单气泡）的点击区域（宽度覆盖自适应后的气泡）。
 static func customer_hit_rect(customers: Array, c: Dictionary) -> Rect2:
 	var p := customer_draw_pos(customers, c)
-	return Rect2(p.x - 45, p.y - 70, 250, 110)
+	return Rect2(p.x - 45, p.y - 70, 300, 110)
 
 
 # ---------- 厨房工位 ----------

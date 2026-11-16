@@ -56,8 +56,10 @@ func _draw_floor() -> void:
 		draw_rect(Rect2(0, GameLayout.HUD_H, GameLayout.W, GameLayout.H - GameLayout.HUD_H), Color(0.96, 0.94, 0.88))
 		draw_rect(Rect2(GameLayout.W * 0.72, GameLayout.HUD_H, GameLayout.W * 0.28, GameLayout.H - GameLayout.HUD_H), Color(0.83, 0.76, 0.67))
 		draw_line(Vector2(GameLayout.W * 0.72, GameLayout.HUD_H), Vector2(GameLayout.W * 0.72, GameLayout.H), Color(0.55, 0.45, 0.35), 4.0)
-	# 底部操作提示
-	draw_string(font, Vector2(560, GameLayout.H - 14), tr("点客人接单 → 点锅做菜 → 点盘子上菜 · 点按钮拖地/开门/打烊"), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.4, 0.35, 0.3))
+	# 底部操作提示：居中放在「提前打烊」与「声音」按钮之间的空档，不被按钮遮挡
+	var hint := tr("接单 → 上工位 → 取走 → 上菜")
+	var hint_w: float = font.get_string_size(hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
+	draw_string(font, Vector2(540.0 + maxf(0.0, (295.0 - hint_w) / 2.0), GameLayout.H - 14), hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.4, 0.35, 0.3))
 
 
 func _draw_dirt() -> void:
@@ -210,7 +212,8 @@ func _draw_bubble(pos: Vector2, c: Dictionary) -> void:
 		progress = tr("（点我上菜）")
 	var text: String = tr(c["recipe_name"]) + progress
 
-	var bw := 128.0
+	# 宽度按文字实际宽度自适应（如「奶茶（点我上工位）」不溢出）
+	var bw: float = maxf(128.0, font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x + 34.0)
 	var bh := 34.0
 	draw_rect(Rect2(pos, Vector2(bw, bh)), Color(1, 1, 1, 0.93))
 	draw_rect(Rect2(pos, Vector2(bw, bh)), Color(0.6, 0.55, 0.5), false, 1.5)

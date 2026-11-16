@@ -15,7 +15,7 @@ static func get_en() -> Dictionary:
 		"厨房": "Kitchen",
 		"接单后在这里做菜": "Take orders to cook here",
 		"采购食材 +5 (¥15) [现有%d]": "Buy ingredients +5 (¥15) [Have %d]",
-		"点客人接单 → 点锅做菜 → 点盘子上菜 · 点按钮拖地/开门/打烊": "Click customer → click pan to cook → click plate to serve",
+		"接单 → 上工位 → 取走 → 上菜": "Order → station → pickup → serve",
 		# HUD
 		"第%d天  8:%02d  %s·天气:%s%s  ¥%d  食材:%d  %s": "Day %d  8:%02d  %s·Weather:%s%s  ¥%d  Ingredients:%d  %s",
 		" 明日:%s": " Tomorrow:%s",

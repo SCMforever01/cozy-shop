@@ -17,7 +17,12 @@ func _draw() -> void:
 	draw_string(font, Vector2(16, 36), line, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color.WHITE)
 	_draw_bar(Vector2(16, 58), 170, GameState.shop["hygiene"], tr("卫生"))
 	_draw_bar(Vector2(280, 58), 170, GameState.shop["environment"], tr("环境"))
-	draw_string(font, Vector2(560, 36), tr("熟客:%s") % _regular_status(), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(1.0, 0.7, 0.8))
+	# 熟客状态：按主行实际宽度摆放（台风天溢价等长文案时不重叠），且不出右边界
+	var reg_text: String = tr("熟客:%s") % _regular_status()
+	var line_w: float = font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x
+	var reg_w: float = font.get_string_size(reg_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
+	var reg_x: float = clampf(16.0 + line_w + 24.0, 560.0, GameLayout.W - 16.0 - reg_w)
+	draw_string(font, Vector2(reg_x, 36), reg_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(1.0, 0.7, 0.8))
 
 
 func _state_text(s: String) -> String:
