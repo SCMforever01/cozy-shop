@@ -7,7 +7,10 @@ extends SceneTree
 ##   godot --headless --script res://tools/balance_sim.gd -- --days=30 --delay=3 --speed=60 --seed=42 --tag=baseline --policy=seat-first
 ##
 ## 参数：days=模拟天数 delay=bot 反应延迟（游戏秒） speed=时间倍速
-##       seed=随机种子 tag=输出标签 policy=升级策略 none / seat-first（先座位扩建后买最便宜）
+##       seed=随机种子 tag=输出标签
+##       policy=升级策略 none / seat-first（先座位扩建后买最便宜）/ hoard-seat（攒钱先买座位，隔离定价因素）
+##       actions=每轮扫描最多处理几件事（注意力容量，限制吞吐）
+##       miss=每轮对「已做好待取走」的锅看漏的概率（注意力被占住 → 可测糊锅率）
 
 var days_target: int = 30
 var bot_delay: float = 3.0
@@ -15,6 +18,8 @@ var speed: float = 60.0
 var rand_seed: int = 42
 var tag: String = "run"
 var policy: String = "none"
+var max_actions: int = 999
+var miss_prob: float = 0.0
 
 var _bus: Node
 var _gs: Node
@@ -56,6 +61,10 @@ func _initialize() -> void:
 			tag = arg.get_slice("=", 1)
 		elif arg.begins_with("--policy="):
 			policy = arg.get_slice("=", 1)
+		elif arg.begins_with("--actions="):
+			max_actions = int(arg.get_slice("=", 1))
+		elif arg.begins_with("--miss="):
+			miss_prob = float(arg.get_slice("=", 1))
 	seed(rand_seed)
 
 	_bus = root.get_node("EventBus")
@@ -117,17 +126,40 @@ func _bot_sweep() -> void:
 		return
 	if _gs.shop["hygiene"] < 40.0:
 		_mop()
+	var budget := max_actions
+	# 优先级即玩家分诊顺序：收桌 > 上菜 > 取走（防糊锅）> 接单 > 派工位
 	for seat in _gs.seats:
+		if budget <= 0:
+			return
 		if seat["dirty"]:
 			_clean(seat["id"])
+			budget -= 1
 	for c in _gs.customers.duplicate():
-		match c["state"]:
-			"waiting":
-				_take_order(c["id"])
-			"being_served":
-				_tap_dish(c["id"])
-			"ready":
-				_serve(c["id"])
+		if budget <= 0:
+			return
+		if c["state"] == "ready":
+			_serve(c["id"])
+			budget -= 1
+	for c in _gs.customers.duplicate():
+		if budget <= 0:
+			return
+		if c["state"] == "being_served" and c["cook"]["phase"] == "done":
+			if miss_prob > 0.0 and randf() < miss_prob:
+				continue  # 看漏了这口锅（注意力被别处占住）
+			_tap_dish(c["id"])  # 取走（灶台在烧）
+			budget -= 1
+	for c in _gs.customers.duplicate():
+		if budget <= 0:
+			return
+		if c["state"] == "waiting":
+			_take_order(c["id"])
+			budget -= 1
+	for c in _gs.customers.duplicate():
+		if budget <= 0:
+			return
+		if c["state"] == "being_served" and c["cook"]["phase"] == "queued":
+			_tap_dish(c["id"])  # 派工位
+			budget -= 1
 
 
 func _buy(amount: int, cost: int) -> void:
@@ -141,9 +173,15 @@ func _buy(amount: int, cost: int) -> void:
 func _buy_upgrades() -> void:
 	var shop: Dictionary = _gs.shop
 	var up: Dictionary = shop["upgrades"]
-	if policy == "seat-first" and up["seat"] == 0 and shop["money"] >= 400:
-		_systems["shop_system"].buy_upgrade("seat")
-		return
+	if up["seat"] == 0:
+		if policy == "hoard-seat" and shop["money"] - _catalog.get_upgrades()["seat"]["costs"][0] >= 35:
+			_systems["shop_system"].buy_upgrade("seat")
+			return
+		if policy == "seat-first" and shop["money"] >= 400:
+			_systems["shop_system"].buy_upgrade("seat")
+			return
+		if policy == "hoard-seat":
+			return  # 攒钱期间不买别的
 	var best := ""
 	var best_cost := 1 << 30
 	for k in up:
