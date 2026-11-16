@@ -57,7 +57,7 @@ func _initialize() -> void:
 	_check(not GS.seats[0]["dirty"], "收桌后桌子干净")
 	_check(not c4["at_door"] and c4["seat_id"] == 0, "收桌后门口客人补位坐下")
 
-	# 用例 5：门口等 10 秒没座就走人（小扣口碑）
+	# 用例 5：门口等满时限没座就走人（不扣口碑：损失营收已是惩罚，满座是生意好）
 	var c5 := _make_customer(5)
 	c5["at_door"] = true
 	c5["door_timer"] = 0.3
@@ -69,7 +69,7 @@ func _initialize() -> void:
 		if c["id"] == 5:
 			still_here = true
 	_check(not still_here, "门口超时客人离开")
-	_check(GS.shop["reputation"] == rep_before - 1, "没座位流失客人小扣口碑")
+	_check(GS.shop["reputation"] == rep_before, "满座走人不扣口碑")
 
 	if _failed == 0:
 		print("PASS: seats 全部用例通过")

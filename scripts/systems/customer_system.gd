@@ -8,7 +8,10 @@ extends System
 ## 0.14 ≈ 一天 8~9 人：配合 4 个工位是「忙得过来但要动脑」的密度。
 const SPAWN_PROB_PER_MINUTE: float = 0.14
 ## 每游戏分钟耐心衰减量（受卫生惩罚放大）。
-const PATIENCE_DECAY_PER_MINUTE: float = 3.0
+## 第 2 轮模拟调 3.0→2.5：3.0 时手慢玩家气走 2/天、口碑崩盘。
+const PATIENCE_DECAY_PER_MINUTE: float = 2.5
+## 门口等座时限（秒）：3 桌利用率约 96%，10 秒必然大量超时走人（第 2 轮模拟 22~48% 走人），20 秒让队列吸收突发。
+const DOOR_WAIT := 20.0
 
 var _next_id: int = 0
 var _spawned_today: Dictionary = {}  # regular_id -> bool
@@ -151,7 +154,7 @@ func _seat_or_queue(c: Dictionary) -> void:
 	if _try_seat(c):
 		return
 	c["at_door"] = true
-	c["door_timer"] = 10.0
+	c["door_timer"] = DOOR_WAIT
 
 
 func _try_seat(c: Dictionary) -> bool:
@@ -208,9 +211,9 @@ func _finish_dining(c: Dictionary) -> void:
 
 
 func _leave_no_seat(c: Dictionary) -> void:
-	# 门口等 10 秒还没座，人走了（小扣口碑）
+	# 门口等满 DOOR_WAIT 还没座，人走了。不扣口碑（第 2 轮模拟：慢手速下
+	# 「走人 -1」让净口碑为负、进度崩盘；损失这单营收已是惩罚，满座是生意好）
 	GameState.customers.erase(c)
-	GameState.shop["reputation"] -= 1
 	EventBus.emit("customer.left_no_seat", {"id": c["id"], "name": c["name"]})
 
 
