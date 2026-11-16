@@ -26,6 +26,15 @@ VOICES = [
     ("voice_birthday", "生日快乐呀！", "开心祝贺的语气", 3001),
     ("voice_thanks", "太好吃了！", "满足又惊喜的食客", 4201),
     ("voice_angry", "哼！再也不来了。", "生气抱怨的语气", 4201),
+    # 反应 / 拟声类音效（短促，带情绪）
+    ("voice_ok", "好嘞！", "干脆利落的爽快应答", 3001),
+    ("voice_serve", "来嘞，请慢用！", "热情上菜的吆喝声", 3001),
+    ("voice_ding", "叮～做好啦！", "轻快提示音般的语气", 4301),
+    ("voice_burn", "哎呀，糊锅了！", "慌张惊呼", 3001),
+    ("voice_mop", "呼……拖完了。", "干完活的轻叹气", 4301),
+    ("voice_bye", "明天见～", "温柔道别", 4301),
+    ("voice_noseat", "哎呀，没座了呀。", "遗憾的小声嘟囔", 4101),
+    ("voice_yummy", "嗯～真香！", "享受美食的陶醉声", 4201),
 ]
 
 
@@ -62,7 +71,7 @@ def synth(text: str, instruction: str, seed: int) -> bytes:
     )
     # 上游模型服务一次只接一单（小说流水线在跑时会 409），耐心抢空隙
     last_err = None
-    for attempt in range(80):
+    for attempt in range(1200):
         try:
             with urllib.request.urlopen(req, timeout=300) as r:
                 return r.read()
@@ -81,6 +90,9 @@ def main() -> int:
     os.makedirs(OUT, exist_ok=True)
     ok = 0
     for name, text, instruction, seed in VOICES:
+        if os.path.exists(f"{OUT}/{name}.wav"):
+            print(f"[skip] {name} exists")
+            continue
         print(f"[gen] {name}: {text!r}")
         pcm = synth(text, instruction, seed)
         wav = make_wav(pcm)

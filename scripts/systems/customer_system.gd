@@ -286,6 +286,7 @@ func take_order(customer_id: int) -> void:
 	c["state"] = "being_served"
 	c["cook"] = {"station_id": -1, "phase": "queued"}
 	GameState.shop["ingredients"] -= 1
+	EventBus.emit("order.taken", {"id": c["id"], "name": c["name"]})
 
 
 func _on_burnt(p) -> void:

@@ -30,6 +30,15 @@ const SFX_EVENTS := [
 	{"event": "regular.celebrate", "key": "voice_birthday", "volume": -2.0},
 	{"event": "customer.served", "key": "voice_thanks", "volume": -4.0, "chance": 0.3},
 	{"event": "customer.left_angry", "key": "voice_angry", "volume": -3.0, "chance": 0.5},
+	# 反应 / 拟声类音效
+	{"event": "order.taken", "key": "voice_ok", "volume": -4.0, "chance": 0.6},
+	{"event": "customer.served", "key": "voice_serve", "volume": -3.0, "chance": 0.7},
+	{"event": "dish.ready", "key": "voice_ding", "volume": -4.0, "chance": 0.5},
+	{"event": "kitchen.burnt", "key": "voice_burn", "volume": -2.0},
+	{"event": "hygiene.mopped", "key": "voice_mop", "volume": -4.0, "chance": 0.5},
+	{"event": "day.summary", "key": "voice_bye", "volume": -3.0},
+	{"event": "customer.left_no_seat", "key": "voice_noseat", "volume": -4.0, "chance": 0.6},
+	{"event": "customer.dined", "key": "voice_yummy", "volume": -4.0, "chance": 0.4},
 ]
 
 var audio: AudioManager

@@ -25,6 +25,14 @@ const SFX := {
 	"voice_birthday": "res://assets/audio/voice_birthday.wav",
 	"voice_thanks": "res://assets/audio/voice_thanks.wav",
 	"voice_angry": "res://assets/audio/voice_angry.wav",
+	"voice_ok": "res://assets/audio/voice_ok.wav",
+	"voice_serve": "res://assets/audio/voice_serve.wav",
+	"voice_ding": "res://assets/audio/voice_ding.wav",
+	"voice_burn": "res://assets/audio/voice_burn.wav",
+	"voice_mop": "res://assets/audio/voice_mop.wav",
+	"voice_bye": "res://assets/audio/voice_bye.wav",
+	"voice_noseat": "res://assets/audio/voice_noseat.wav",
+	"voice_yummy": "res://assets/audio/voice_yummy.wav",
 }
 
 var enabled: bool = true
