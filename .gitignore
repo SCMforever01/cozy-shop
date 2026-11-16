@@ -20,3 +20,6 @@ gradle_*.log
 
 # Android 构建资源被 Godot 扫描生成的 .import（构建产物，不入库）
 android/**/*.import
+
+# 安卓 APK 不入库（下载见 GitHub Releases）
+/*.apk
