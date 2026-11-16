@@ -118,4 +118,10 @@ func _draw() -> void:
 		var alpha := clampf(1.0 - f["age"] / FLOATER_LIFETIME, 0.0, 1.0)
 		var c: Color = f["color"]
 		c.a = alpha
-		UITheme.label(self, font, f["pos"], f["text"], 24, c, HORIZONTAL_ALIGNMENT_CENTER)
+		# 出现瞬间弹一下（scale 1.25 -> 1.0）；奶油底板保证任何背景上可读
+		var pop := 1.0 + 0.25 * maxf(0.0, 1.0 - f["age"] / 0.18)
+		var tw: float = font.get_string_size(f["text"], HORIZONTAL_ALIGNMENT_LEFT, -1, 24).x + 26.0
+		draw_set_transform(f["pos"], 0.0, Vector2(pop, pop))
+		UITheme.panel(self, Rect2(Vector2(-tw / 2.0, -22.0), Vector2(tw, 34.0)), Color(0.98, 0.94, 0.86, 0.92 * alpha), 9, Color(0.3, 0.22, 0.14, 0.5), 1)
+		UITheme.label(self, font, Vector2.ZERO, f["text"], 24, c, HORIZONTAL_ALIGNMENT_CENTER)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)

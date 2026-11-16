@@ -19,6 +19,8 @@ static func get_en() -> Dictionary:
 		# HUD
 		"第%d天  8:%02d  %s·天气:%s%s  ¥%d  食材:%d  %s": "Day %d  8:%02d  %s·Weather:%s%s  ¥%d  Ingredients:%d  %s",
 		" 明日:%s": " Tomorrow:%s",
+		"第%d天": "Day %d",
+		"食材": "Ingredients",
 		"卫生": "Hygiene",
 		"环境": "Environment",
 		"熟客:%s": "Regulars:%s",

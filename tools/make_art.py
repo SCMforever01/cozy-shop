@@ -155,6 +155,10 @@ def person(name, hair, shirt, apron=None, skin=SKIN, hair_style="short", accesso
 
 def table_set():
     im, d = canvas(120, 50)
+    # 地毯（桌椅下层，暖红棕花纹）
+    d.ellipse([4, 20, 116, 50], fill=hx("#B5654A"))
+    d.ellipse([7, 22, 113, 48], fill=hx("#C87A5C"))
+    d.ellipse([13, 26, 107, 44], fill=hx("#B5654A"))
     # 椅子（左/右，侧视）：竖立靠背 + 坐垫 + 腿
     for cx in (2, 92):
         # 靠背（竖板，圆顶）
@@ -286,6 +290,15 @@ def background():
         cx = 490 + i * 50
         d.rectangle([cx, 26, cx + 4, 34], fill=GREY_D)
         d.ellipse([cx - 6, 34, cx + 10, 48], fill=KITCH_L, outline=KITCH_M)
+    # 吊灯 + 暖光锥（客席上方两盏）
+    for lx in (125, 310):
+        d.line([lx, 13, lx, 22], fill=INK)                       # 吊线
+        d.polygon([(lx - 10, 30), (lx + 10, 30), (lx + 6, 22), (lx - 6, 22)], fill=WOOD_D, outline=INK)  # 灯罩
+        d.ellipse([lx - 5, 29, lx + 5, 34], fill=GOLD)           # 灯泡
+        cone = Image.new("RGBA", (640, 360), (0, 0, 0, 0))
+        cd = ImageDraw.Draw(cone)
+        cd.polygon([(lx - 8, 34), (lx + 8, 34), (lx + 72, 205), (lx - 72, 205)], fill=(255, 214, 140, 42))
+        im.alpha_composite(cone)
     # 分区线（客席 / 厨房）
     d.rectangle([458, 10, 462, H], fill=WOOD_D)
     d.line([460, 10, 460, H], fill=INK)

@@ -51,7 +51,8 @@ static func panel(canvas: CanvasItem, rect: Rect2, bg: Color, radius: int = 12, 
 	canvas.draw_style_box(_box(bg, radius, border, border_w, shadow, shadow_ofs), rect)
 
 
-## 按钮：底色 + 顶部高光条 + 底部暗边，营造立体感。kind: accent/green/grey/brown/red。
+## 按钮：像素风硬边（硬阴影 + 2~3 色阶、无渐变高光），和像素场景统一。
+## kind: accent/green/grey/brown/red。
 static func button(canvas: CanvasItem, rect: Rect2, label: String, font: Font, kind: String, enabled: bool = true, font_size: int = 18) -> void:
 	var base: Color
 	var edge: Color
@@ -75,12 +76,14 @@ static func button(canvas: CanvasItem, rect: Rect2, label: String, font: Font, k
 		base = Color(0.47, 0.45, 0.45)
 		edge = Color(0.35, 0.33, 0.33)
 	var r := rect
-	canvas.draw_style_box(_box(base, 10, edge, 2, 5, Vector2(0, 3)), r)
-	# 顶部高光
-	canvas.draw_style_box(_box(Color(1, 1, 1, 0.16), 8, Color(0, 0, 0, 0), 0, 0, Vector2()), Rect2(r.position + Vector2(4, 3), Vector2(r.size.x - 8, r.size.y * 0.42)))
+	# 硬阴影（偏移纯色块）
+	canvas.draw_style_box(_box(edge.darkened(0.35), 3, Color(0, 0, 0, 0), 0, 0, Vector2()), Rect2(r.position + Vector2(0, 4), r.size))
+	# 主体 + 描边
+	canvas.draw_style_box(_box(base, 3, edge, 2, 0, Vector2()), r)
+	# 色阶：顶部亮边 / 底部暗边（无渐变）
+	canvas.draw_rect(Rect2(r.position + Vector2(3, 3), Vector2(r.size.x - 6, 3)), base.lightened(0.16))
+	canvas.draw_rect(Rect2(r.position + Vector2(3, r.size.y - 6), Vector2(r.size.x - 6, 3)), edge)
 	var text_color := Color.WHITE if enabled else Color(0.95, 0.93, 0.90)
-	if enabled:
-		text_color = text_color.darkened(0.0)
 	# 文字带 1px 暗描边（浅底上也清楚）
 	var tp := r.position + Vector2(0, r.size.y * 0.5) + Vector2(0, font.get_ascent(font_size) * 0.5 - 2)
 	for ofs in [Vector2(-1, 0), Vector2(1, 0), Vector2(0, -1), Vector2(0, 1)]:
@@ -88,15 +91,15 @@ static func button(canvas: CanvasItem, rect: Rect2, label: String, font: Font, k
 	canvas.draw_string(font, tp, label, HORIZONTAL_ALIGNMENT_CENTER, r.size.x, font_size, text_color)
 
 
-## 胶囊进度条（圆角底 + 渐变感填充 + 高光）。
+## 进度条：像素风硬边（方角 + 色阶顶边）。
 static func progress(canvas: CanvasItem, rect: Rect2, ratio: float, fill: Color, bg: Color = Color(0, 0, 0, 0.42)) -> void:
-	canvas.draw_style_box(_box(bg, rect.size.y / 2.0, Color(0, 0, 0, 0), 0, 0, Vector2()), rect)
+	canvas.draw_style_box(_box(bg, 2, Color(0, 0, 0, 0), 0, 0, Vector2()), rect)
 	var w: float = (rect.size.x - 2.0) * clampf(ratio, 0.0, 1.0)
-	if w < 4.0:
+	if w < 3.0:
 		return
 	var fill_rect := Rect2(rect.position + Vector2(1, 1), Vector2(w, rect.size.y - 2))
-	canvas.draw_style_box(_box(fill, (rect.size.y - 2.0) / 2.0, Color(0, 0, 0, 0), 0, 0, Vector2()), fill_rect)
-	canvas.draw_style_box(_box(Color(1, 1, 1, 0.22), (rect.size.y - 2.0) / 2.0, Color(0, 0, 0, 0), 0, 0, Vector2()), Rect2(fill_rect.position + Vector2(2, 1), Vector2(maxf(w - 4, 2), fill_rect.size.y * 0.38)))
+	canvas.draw_style_box(_box(fill, 2, Color(0, 0, 0, 0), 0, 0, Vector2()), fill_rect)
+	canvas.draw_rect(Rect2(fill_rect.position + Vector2(1, 1), Vector2(maxf(w - 2, 2), 2)), fill.lightened(0.22))
 
 
 ## 小徽章（顾客头顶名字/状态用）。

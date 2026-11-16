@@ -34,6 +34,10 @@ func _exit_tree() -> void:
 	EventBus.unsubscribe("weather.changed", _on_weather_changed)
 
 
+## 窗户玻璃区域（游戏坐标）：雨只落在窗外，室内不再"下雨"。
+const WINDOW_RECTS := [Rect2(140, 36, 72, 56), Rect2(360, 36, 72, 56)]
+
+
 func _on_weather_changed(weather_id: String) -> void:
 	if weather_id == "rain" or weather_id == "storm" or weather_id == "typhoon":
 		_spawn_rain()
@@ -43,16 +47,23 @@ func _on_weather_changed(weather_id: String) -> void:
 
 func _spawn_rain() -> void:
 	_rain.clear()
-	for i in range(90):
-		_rain.append({"x": randf() * GameLayout.W, "y": randf() * GameLayout.H, "speed": 320.0 + randf() * 240.0})
+	for i in range(24):
+		var win: Rect2 = WINDOW_RECTS[i % 2]
+		_rain.append({
+			"x": win.position.x + randf() * win.size.x,
+			"y": win.position.y + randf() * win.size.y,
+			"speed": 90.0 + randf() * 70.0,
+			"win": i % 2,
+		})
 
 
 func _animate(_delta: float) -> void:
 	for d in _rain:
 		d["y"] += d["speed"] * _delta
-		if d["y"] > GameLayout.H:
-			d["y"] = -10.0
-			d["x"] = randf() * GameLayout.W
+		var win: Rect2 = WINDOW_RECTS[d["win"]]
+		if d["y"] > win.end.y:
+			d["y"] = win.position.y
+			d["x"] = win.position.x + randf() * win.size.x
 	# 记录新顾客入场时间；离场后清理
 	for c in GameState.customers:
 		if not _entered_at.has(c["id"]):
@@ -72,9 +83,10 @@ func _draw() -> void:
 	_draw_sun()
 	_draw_customers()
 	_draw_tables()
-	# 雨画在场景之上、UI 之下
+	# 窗外雨（只在窗玻璃范围内）
 	for d in _rain:
-		draw_line(Vector2(d["x"], d["y"]), Vector2(d["x"] - 2, d["y"] + 12), Color(0.45, 0.62, 0.92, 0.45), 1.5)
+		draw_line(Vector2(d["x"], d["y"]), Vector2(d["x"] - 1, d["y"] + 7), Color(0.55, 0.72, 0.95, 0.75), 1.5)
+	_weather_tint()
 
 
 func _draw_floor() -> void:
@@ -124,14 +136,41 @@ func _draw_decor_tex(key: String, pos: Vector2, scale: int) -> void:
 	draw_texture_rect(tex, Rect2(pos.x - s / 2, pos.y - s / 2, s, s), false)
 
 
+## 天气氛围：窗户暖光柱（晴/阴）+ 全屏色调（雨蓝、台风暗紫）。
+func _weather_tint() -> void:
+	var full := Rect2(0, 0, GameLayout.W, GameLayout.H)
+	match GameState.weather_id:
+		"sunny":
+			_draw_window_light(140, 212)
+			_draw_window_light(360, 432)
+		"overcast":
+			draw_rect(full, Color(0.55, 0.55, 0.62, 0.08))
+		"rain":
+			draw_rect(full, Color(0.42, 0.50, 0.72, 0.11))
+		"storm":
+			draw_rect(full, Color(0.33, 0.38, 0.64, 0.17))
+		"typhoon":
+			draw_rect(full, Color(0.26, 0.28, 0.46, 0.23))
+
+
+## 从窗户斜射到地板的暖光柱。
+func _draw_window_light(x0: float, x1: float) -> void:
+	draw_colored_polygon(PackedVector2Array([
+		Vector2(x0, 92), Vector2(x1, 92), Vector2(x1 + 120, 420), Vector2(x0 + 120, 420),
+	]), Color(1.0, 0.87, 0.55, 0.10))
+
+
 func _draw_sun() -> void:
 	if GameState.weather_id != "sunny":
 		return
-	var c := Vector2(GameLayout.W - 90, 110)
-	draw_circle(c, 36, Color(1.0, 0.85, 0.3))
+	# 位置在客席区上空（不压厨房提示文字），像素风方块射线
+	var c := Vector2(830, 96)
+	draw_circle(c, 30, Color(1.0, 0.85, 0.3))
+	draw_circle(c, 22, Color(1.0, 0.92, 0.55))
 	for i in range(8):
 		var a := i * TAU / 8.0
-		draw_line(c + Vector2(cos(a), sin(a)) * 46, c + Vector2(cos(a), sin(a)) * 58, Color(1.0, 0.8, 0.25), 3.0)
+		var rp := c + Vector2(cos(a), sin(a)) * 42
+		draw_rect(Rect2(rp - Vector2(4, 4), Vector2(8, 8)), Color(1.0, 0.8, 0.25))
 
 
 # ---------- 顾客 ----------
@@ -155,6 +194,9 @@ func _draw_customer(c: Dictionary, pos: Vector2, idx: int) -> void:
 	pos += Vector2(sin(_t * 2.0 + idx * 1.7) * 1.2, sin(_t * 3.1 + idx * 2.3) * 1.6)
 	var radius := 32.0
 	var mood := clampf(c["patience"] / c["patience_max"], 0.0, 1.0)
+	# 生气（耐心 <30%）：身体发抖
+	if mood < 0.3:
+		pos.x += sin(_t * 28.0) * 1.8
 	var body: Color = CUSTOMER_COLORS[idx % CUSTOMER_COLORS.size()]
 	if c["regular_id"] != "":
 		body = Color(0.95, 0.55, 0.3)
@@ -196,6 +238,20 @@ func _draw_customer(c: Dictionary, pos: Vector2, idx: int) -> void:
 		else:
 			draw_arc(pos + Vector2(0, 12), 10 * scale, 0.15, PI - 0.15, 12, Color(0.1, 0.1, 0.1), 2.0)
 
+	# 生气怒纹（耐心告急）
+	if mood < 0.3:
+		for k in range(3):
+			var vx := pos.x - 14.0 + k * 14.0
+			draw_line(Vector2(vx, pos.y - 62), Vector2(vx + 5, pos.y - 70), UITheme.RED, 2.5)
+	# 用餐中的爱心（好吃！）
+	if c["state"] == "dining":
+		var hy: float = pos.y - 52.0 - fmod(_t * 18.0 + idx * 7.0, 14.0)
+		var hx2 := pos.x + 16.0 + sin(_t * 3.0 + idx) * 3.0
+		draw_colored_polygon(PackedVector2Array([
+			Vector2(hx2, hy + 5), Vector2(hx2 - 5, hy), Vector2(hx2 - 3, hy - 4),
+			Vector2(hx2, hy - 2), Vector2(hx2 + 3, hy - 4), Vector2(hx2 + 5, hy),
+		]), Color(1.0, 0.55, 0.62, 0.9))
+
 	# 生日帽
 	if c.get("celebrating", false):
 		draw_colored_polygon(PackedVector2Array([
@@ -226,8 +282,19 @@ func _draw_customer(c: Dictionary, pos: Vector2, idx: int) -> void:
 		UITheme.progress(self, Rect2(pos + Vector2(-radius, bar_dy + 11), Vector2(bar_w, 7)), ratio, UITheme.GOLD)
 		UITheme.badge(self, Rect2(pos + Vector2(radius + 6, bar_dy + 8), Vector2(34, 15)), "%ds" % ceili(c["door_timer"]), font, Color(0.45, 0.32, 0.10, 0.9), UITheme.GOLD, 11)
 
-	# 点单气泡
-	_draw_bubble(pos + Vector2(radius + 16, -radius), c)
+	# 点单气泡：队首完整显示，其余排队客人收成小徽章（避免人塔气泡互叠）
+	if c.get("at_door", false) and GameLayout.door_index(GameState.customers, c) > 0:
+		_draw_queue_chip(pos, c, radius)
+	else:
+		_draw_bubble(pos + Vector2(radius + 16, -radius), c)
+
+
+## 排队小徽章：菜品图标 + 剩余秒数（队首以外的等座客人）。
+func _draw_queue_chip(pos: Vector2, c: Dictionary, radius: float) -> void:
+	var chip := Rect2(pos + Vector2(18, -radius - 12), Vector2(70, 26))
+	UITheme.panel(self, chip, UITheme.CREAM, 9, Color(0.35, 0.27, 0.20, 0.35), 1, 4, Vector2(0, 2))
+	_draw_food(chip.position + Vector2(15, 13), 8, c["recipe_id"])
+	UITheme.label(self, font, chip.position + Vector2(32, 18), "%ds" % ceili(c["door_timer"]), 12, UITheme.INK_SOFT)
 
 
 ## 点单气泡：米白圆角卡片 + 投影 + 小尾巴 + 食物图标框。

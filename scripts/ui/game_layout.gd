@@ -60,15 +60,19 @@ static func door_index(customers: Array, c: Dictionary) -> int:
 	return n
 
 
-## 顾客当前绘制位置：座位上的桌子后方 / 门口等座 / 入场走位中。
+## 门口排队位置：沿对角线错位排开（避免人塔堆叠 + 气泡不出厨房分界线）。
+static func door_queue_pos(index: int) -> Vector2:
+	return Vector2(650.0 - 58.0 * index, 445.0 + 27.0 * index)
+
+
+## 顾客当前绘制位置：座位上的桌子后方 / 门口等座（错位队列）/ 入场走位中。
 static func customer_draw_pos(customers: Array, c: Dictionary) -> Vector2:
-	var base: Vector2 = DOOR_POS + Vector2(0, -52.0 * door_index(customers, c))
 	if not c.get("at_door", false) and c.get("seat_id", -1) >= 0:
-		base = SEAT_POS[c["seat_id"]]
-	var target := base + Vector2(0, -40)
-	if c["enter_t"] > 0.0:
-		return (DOOR_POS + Vector2(0, -40)).lerp(target, 1.0 - c["enter_t"])
-	return target
+		var target: Vector2 = SEAT_POS[c["seat_id"]] + Vector2(0, -40)
+		if c["enter_t"] > 0.0:
+			return door_queue_pos(0).lerp(target, 1.0 - c["enter_t"])
+		return target
+	return door_queue_pos(door_index(customers, c))
 
 
 ## 顾客（头像 + 点单气泡）的点击区域（宽度覆盖自适应后的气泡）。
