@@ -188,6 +188,14 @@ func _draw_customer(c: Dictionary, pos: Vector2, idx: int) -> void:
 	draw_rect(Rect2(bar_pos, Vector2(bar_w, 8)), Color(0, 0, 0, 0.4))
 	draw_rect(Rect2(bar_pos, Vector2(bar_w * mood, 8)), _patience_color(mood))
 
+	# 门口等座倒计时：橙色递减条 + 秒数（让玩家看到谁快走了，优先处理）
+	if c.get("at_door", false):
+		var ratio: float = clampf(c["door_timer"] / CustomerSystem.DOOR_WAIT, 0.0, 1.0)
+		var dt_pos := pos + Vector2(-radius, bar_dy + 12)
+		draw_rect(Rect2(dt_pos, Vector2(bar_w, 6)), Color(0, 0, 0, 0.4))
+		draw_rect(Rect2(dt_pos, Vector2(bar_w * ratio, 6)), Color(0.95, 0.6, 0.2))
+		draw_string(font, dt_pos + Vector2(bar_w + 6, 7), "%ds" % ceili(c["door_timer"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.95, 0.7, 0.3))
+
 	# 点单气泡
 	_draw_bubble(pos + Vector2(radius + 16, -radius), c)
 
