@@ -32,6 +32,9 @@ mkdir -p build/web
 godot --headless --export-release "Web" build/web/index.html
 python3 serve.py 8090
 ```
+- **安卓 APK**：不入库，下载见 GitHub Releases（`cozy-shop-vX.X.X-debug.apk`）。
+  在仓库根目录用 Capacitor 打包（`npx cap sync android && cd android && ./gradlew assembleDebug`），
+  产出 APK 拷到根目录后上传到 Release，不要 commit 进仓库。
 
 ## 4. 架构（事件驱动 + 数据驱动 + 分层 UI）
 
@@ -154,6 +157,7 @@ python3 serve.py 8090
 - `README.md`：使用说明、项目结构、如何扩展
 - `docs/IMPLEMENTATION_PLAN.md`：实现计划
 - `docs/ROADMAP.md`：后续开发规划
+- `docs/PLAYTEST.md`：试玩数据与迭代日志
 - `docs/HANDOFF.md`：本文档
 
 ## 8. 测试
