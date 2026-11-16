@@ -58,6 +58,7 @@ func _process(delta: float) -> void:
 		return
 	if GameState.equipment_broken_ticks > 0:
 		return  # 设备故障：计时冻结（含糊锅倒计时，故障是惩罚不是灾难）
+	delta *= GameClock.speed_multiplier  # 与游戏时钟同步变速
 	for s in stations:
 		match s["phase"]:
 			"cooking":

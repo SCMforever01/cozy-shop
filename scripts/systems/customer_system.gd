@@ -220,16 +220,16 @@ func _process(delta: float) -> void:
 		return
 	for c in GameState.customers.duplicate():
 		if c["enter_t"] > 0.0:
-			c["enter_t"] = maxf(c["enter_t"] - delta / 0.8, 0.0)
+			c["enter_t"] = maxf(c["enter_t"] - delta * GameClock.speed_multiplier / 0.8, 0.0)
 		if c["state"] == "dining":
-			c["dine_timer"] -= delta
+			c["dine_timer"] -= delta * GameClock.speed_multiplier
 			if c["dine_timer"] <= 0.0:
 				_finish_dining(c)
 		elif c.get("at_door", false):
 			if _try_seat(c):
 				pass  # 有人翻台了，补位坐下
 			else:
-				c["door_timer"] -= delta
+				c["door_timer"] -= delta * GameClock.speed_multiplier
 				if c["door_timer"] <= 0.0:
 					_leave_no_seat(c)
 

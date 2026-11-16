@@ -14,6 +14,8 @@ var minutes_per_day: int = 60
 
 var day: int = 1
 var game_minute: int = 0
+## 时间倍速：同时缩放游戏分钟和真实秒机制（做菜/拖地/用餐计时），
+## 保持两边时间尺度一致。演示模式调大它整体加速，普通游玩保持 1.0。
 var speed_multiplier: float = 1.0
 var is_paused: bool = false
 
