@@ -4,20 +4,22 @@ extends SceneTree
 ## 同一随机种子下不同参数的结果可直接对比，用于数值迭代的数据支撑。
 ##
 ## 运行：
-##   godot --headless --script res://tools/balance_sim.gd -- --days=30 --delay=3 --speed=60 --seed=42 --tag=baseline
+##   godot --headless --script res://tools/balance_sim.gd -- --days=30 --delay=3 --speed=60 --seed=42 --tag=baseline --policy=seat-first
 ##
 ## 参数：days=模拟天数 delay=bot 反应延迟（游戏秒） speed=时间倍速
-##       seed=随机种子 tag=输出标签
+##       seed=随机种子 tag=输出标签 policy=升级策略 none / seat-first（先座位扩建后买最便宜）
 
 var days_target: int = 30
 var bot_delay: float = 3.0
 var speed: float = 60.0
 var rand_seed: int = 42
 var tag: String = "run"
+var policy: String = "none"
 
 var _bus: Node
 var _gs: Node
 var _gc: Node
+var _catalog = load("res://data/catalog.gd")
 var _systems: Dictionary = {}  # name -> System 实例
 var _acc_game_sec: float = 0.0
 var _day: int = 1
@@ -34,6 +36,9 @@ var _stats := {
 	"spoiled_events": 0,
 	"mop_count": 0,
 	"reputation_end": 0,
+	"upgrades_bought": [],   # [day, category]
+	"gross_income": 0,      # 服务毛收入（revenue_by_day 是含采购/升级的净额）
+	"money_end": 0,
 }
 
 
@@ -49,6 +54,8 @@ func _initialize() -> void:
 			rand_seed = int(arg.get_slice("=", 1))
 		elif arg.begins_with("--tag="):
 			tag = arg.get_slice("=", 1)
+		elif arg.begins_with("--policy="):
+			policy = arg.get_slice("=", 1)
 	seed(rand_seed)
 
 	_bus = root.get_node("EventBus")
@@ -67,7 +74,9 @@ func _initialize() -> void:
 		_stats["reputation_end"] = p["reputation"]
 		if _stats["revenue_by_day"].size() >= days_target:
 			_finish())
-	_bus.subscribe("customer.served", func(_p): _stats["served"] += 1)
+	_bus.subscribe("customer.served", func(p):
+		_stats["served"] += 1
+		_stats["gross_income"] += int(p["earned"]))
 	_bus.subscribe("customer.entered", func(_p): _stats["arrivals"] += 1)
 	_bus.subscribe("kitchen.burnt", func(_p): _stats["burnt"] += 1)
 	_bus.subscribe("customer.left_angry", func(_p): _stats["angry_left"] += 1)
@@ -76,6 +85,7 @@ func _initialize() -> void:
 		_stats["spoiled_events"] += 1
 		_stats["spoiled_total"] += int(p["amount"]))
 	_bus.subscribe("hygiene.mop_started", func(_p): _stats["mop_count"] += 1)
+	_bus.subscribe("upgrade.bought", func(p): _stats["upgrades_bought"].append([_day, p["category"]]))
 	_bus.subscribe("clock.day_started", func(d): _day = int(d))
 
 	_gc.speed_multiplier = speed
@@ -98,6 +108,8 @@ func _process(delta: float) -> bool:
 func _bot_sweep() -> void:
 	if _gs.shop["ingredients"] < 10 and _gs.shop["money"] >= 35:
 		_buy(15, 35)
+	if policy != "none":
+		_buy_upgrades()
 	if _gs.shop["day_state"] == "preparing":
 		_buy(15, 35)
 		_gs.shop["day_state"] = "serving"
@@ -120,6 +132,28 @@ func _bot_sweep() -> void:
 
 func _buy(amount: int, cost: int) -> void:
 	_systems["shop_system"].buy_ingredients(amount, cost)
+
+
+## 升级策略（policy）：
+##   seat-first —— 先买座位扩建（门口走人是最大漏损），之后买「买得起的最便宜」
+##   none       —— 不买升级（基线）
+## 统一保留 ¥100 现金流买食材。
+func _buy_upgrades() -> void:
+	var shop: Dictionary = _gs.shop
+	var up: Dictionary = shop["upgrades"]
+	if policy == "seat-first" and up["seat"] == 0 and shop["money"] >= 400:
+		_systems["shop_system"].buy_upgrade("seat")
+		return
+	var best := ""
+	var best_cost := 1 << 30
+	for k in up:
+		var costs: Array = _catalog.get_upgrades()[k]["costs"]
+		var lvl: int = up[k]
+		if lvl < costs.size() and costs[lvl] < best_cost and shop["money"] - costs[lvl] >= 100:
+			best = k
+			best_cost = costs[lvl]
+	if best != "":
+		_systems["shop_system"].buy_upgrade(best)
 
 
 func _mop() -> void:
@@ -149,5 +183,6 @@ func _finish() -> void:
 	for v in rev:
 		total += v
 	_stats["revenue_avg"] = int(float(total) / maxf(rev.size(), 1))
+	_stats["money_end"] = _gs.shop["money"]
 	print("[sim] RESULT tag=%s %s" % [tag, JSON.stringify(_stats)])
 	quit(0)
