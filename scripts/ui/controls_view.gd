@@ -1,7 +1,6 @@
 class_name ControlsView
 extends UIView
-## 底部操作区：开门 / 拖地 / 打烊（台风歇业）/ 重置 / 语言 / 风格 / 声音按钮，
-## 开店前的升级（5 类）与采购（小份/囤货）按钮。
+## 底部操作台：深色圆角控制台面板 + 主题按钮（开门/拖地/打烊/重置/语言/风格/声音/升级/采购）。
 ## 纯渲染；点击处理在 scenes/main.gd（几何取自 GameLayout）。
 
 
@@ -13,21 +12,28 @@ var audio: AudioController
 
 
 func _draw() -> void:
-	_draw_button(GameLayout.OPEN_RECT, tr("开门营业"), GameState.shop["day_state"] == "preparing")
-	# 拖地按钮：动作进行中显示进度
+	# 控制台底座：整条按钮区坐在一块深色圆角面板上，按钮更「成套」
+	UITheme.panel(self, Rect2(12, GameLayout.H - 212, GameLayout.W - 24, 204), Color(0.17, 0.13, 0.12, 0.55), 18, Color(1, 1, 1, 0.10), 1, 10, Vector2(0, 4))
+
+	# 主操作行
+	_draw_button(GameLayout.OPEN_RECT, tr("开门营业"), GameState.shop["day_state"] == "preparing", "accent")
 	var mop_label: String = tr("拖地") + " (+%d)" % int(30 + GameState.shop["upgrades"]["mop"] * 10)
 	if hygiene.is_mopping():
 		mop_label = tr("拖地中…")
-	_draw_button(GameLayout.MOP_RECT, mop_label, GameState.shop["day_state"] == "serving")
+	_draw_button(GameLayout.MOP_RECT, mop_label, GameState.shop["day_state"] == "serving", "accent")
 	if hygiene.is_mopping():
-		draw_rect(Rect2(GameLayout.MOP_RECT.position + Vector2(6, GameLayout.MOP_RECT.size.y - 10), Vector2((GameLayout.MOP_RECT.size.x - 12) * hygiene.mop_progress(), 5)), Color(0.4, 0.8, 1.0, 0.9))
+		UITheme.progress(self, Rect2(GameLayout.MOP_RECT.position + Vector2(8, GameLayout.MOP_RECT.size.y - 9), Vector2(GameLayout.MOP_RECT.size.x - 16, 5)), hygiene.mop_progress(), UITheme.BLUE)
 	# 台风天二选一：开门搏一把（默认） vs 台风歇业保库存
 	var typhoon_day: bool = GameState.shop["day_state"] == "preparing" and GameState.weather_id == "typhoon"
-	_draw_button(GameLayout.CLOSE_RECT, tr("台风歇业") if typhoon_day else tr("提前打烊"), GameState.shop["day_state"] == "serving" or typhoon_day)
-	_draw_button(GameLayout.RESET_RECT, tr("重置进度"), true)
-	_draw_button(GameLayout.LANG_RECT, "EN" if not language_system.is_en() else "中文", true)
-	_draw_button(GameLayout.STYLE_RECT, "像素" if GameLayout.use_sprites else "代码", true)
-	_draw_button(GameLayout.SOUND_RECT, tr("声音 开") if audio.is_enabled() else tr("声音 关"), true)
+	_draw_button(GameLayout.CLOSE_RECT, tr("台风歇业") if typhoon_day else tr("提前打烊"), GameState.shop["day_state"] == "serving" or typhoon_day, "green" if typhoon_day else "grey")
+	_draw_button(GameLayout.RESET_RECT, tr("重置进度"), true, "grey")
+	_draw_button(GameLayout.LANG_RECT, "EN" if not language_system.is_en() else "中文", true, "grey")
+	_draw_button(GameLayout.STYLE_RECT, "像素" if GameLayout.use_sprites else "代码", true, "grey")
+	_draw_button(GameLayout.SOUND_RECT, tr("声音 开") if audio.is_enabled() else tr("声音 关"), true, "grey")
+	# 操作流程提示：居中浮在控制台空区
+	var hint := tr("接单 → 上工位 → 取走 → 上菜")
+	var hint_w: float = font.get_string_size(hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x + 28
+	UITheme.badge(self, Rect2(Vector2(540 + (295 - hint_w) / 2.0, GameLayout.H - 34), Vector2(hint_w, 24)), hint, font, Color(0.98, 0.94, 0.86, 0.92), UITheme.INK_SOFT, 15)
 	_draw_upgrades()
 
 
@@ -46,22 +52,16 @@ func _draw_upgrades() -> void:
 
 func _draw_buy_button(rect: Rect2, label: String, cost: int) -> void:
 	var enabled: bool = GameState.shop["money"] >= cost
-	var c := Color(0.6, 0.45, 0.2) if enabled else Color(0.42, 0.42, 0.45)
-	draw_rect(rect, c)
-	draw_rect(rect, Color(0, 0, 0, 0.3), false, 2.0)
-	draw_string(font, rect.position + Vector2(10, rect.size.y - 14), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color.WHITE)
+	_draw_button(rect, label, enabled, "brown", 15)
 
 
 func _draw_upgrade_button(rect: Rect2, category: String) -> void:
 	var info: Dictionary = Catalog.get_upgrades()[category]
 	var level: int = GameState.shop["upgrades"][category]
 	var enabled: bool = level < info["costs"].size() and GameState.shop["money"] >= info["costs"][level]
-	var c := Color(0.33, 0.5, 0.36) if enabled else Color(0.42, 0.42, 0.45)
-	draw_rect(rect, c)
-	draw_rect(rect, Color(0, 0, 0, 0.3), false, 2.0)
 	var label: String
 	if level >= info["costs"].size():
 		label = tr("%s MAX") % tr(info["name"])
 	else:
 		label = tr("%s Lv%d→%d ¥%d") % [tr(info["name"]), level, level + 1, info["costs"][level]]
-	draw_string(font, rect.position + Vector2(10, rect.size.y - 14), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE)
+	_draw_button(rect, label, enabled, "green" if enabled else "grey", 16)

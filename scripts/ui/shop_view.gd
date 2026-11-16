@@ -14,12 +14,14 @@ const CUSTOMER_COLORS := [
 ]
 
 var _entered_at: Dictionary = {}  # customer_id -> 入场时间（做缩放入场动画）
+var _rain: Array = []             # {x, y, speed} 雨滴（画在场景上、UI 之下）
 var _customer_textures: Dictionary = {}
 var _decor_textures: Dictionary = {}
 var _bg_texture: Texture2D
 
 
 func _ready() -> void:
+	EventBus.subscribe("weather.changed", _on_weather_changed)
 	_bg_texture = load("res://assets/sprites/shop_bg.png")
 	for key in ["laozhang", "xiaowang", "lijie", "critic", "g0", "g1", "g2", "g3", "g4", "g5"]:
 		_customer_textures[key] = load("res://assets/sprites/customer_%s.png" % key)
@@ -27,7 +29,29 @@ func _ready() -> void:
 		_decor_textures[key] = load("res://assets/sprites/decor_%s.png" % key)
 
 
+func _exit_tree() -> void:
+	EventBus.unsubscribe("weather.changed", _on_weather_changed)
+
+
+func _on_weather_changed(weather_id: String) -> void:
+	if weather_id == "rain" or weather_id == "storm" or weather_id == "typhoon":
+		_spawn_rain()
+	else:
+		_rain.clear()
+
+
+func _spawn_rain() -> void:
+	_rain.clear()
+	for i in range(90):
+		_rain.append({"x": randf() * GameLayout.W, "y": randf() * GameLayout.H, "speed": 320.0 + randf() * 240.0})
+
+
 func _animate(_delta: float) -> void:
+	for d in _rain:
+		d["y"] += d["speed"] * _delta
+		if d["y"] > GameLayout.H:
+			d["y"] = -10.0
+			d["x"] = randf() * GameLayout.W
 	# 记录新顾客入场时间；离场后清理
 	for c in GameState.customers:
 		if not _entered_at.has(c["id"]):
@@ -47,6 +71,9 @@ func _draw() -> void:
 	_draw_sun()
 	_draw_customers()
 	_draw_tables()
+	# 雨画在场景之上、UI 之下
+	for d in _rain:
+		draw_line(Vector2(d["x"], d["y"]), Vector2(d["x"] - 2, d["y"] + 12), Color(0.45, 0.62, 0.92, 0.45), 1.5)
 
 
 func _draw_floor() -> void:
@@ -56,19 +83,18 @@ func _draw_floor() -> void:
 		draw_rect(Rect2(0, GameLayout.HUD_H, GameLayout.W, GameLayout.H - GameLayout.HUD_H), Color(0.96, 0.94, 0.88))
 		draw_rect(Rect2(GameLayout.W * 0.72, GameLayout.HUD_H, GameLayout.W * 0.28, GameLayout.H - GameLayout.HUD_H), Color(0.83, 0.76, 0.67))
 		draw_line(Vector2(GameLayout.W * 0.72, GameLayout.HUD_H), Vector2(GameLayout.W * 0.72, GameLayout.H), Color(0.55, 0.45, 0.35), 4.0)
-	# 底部操作提示：居中放在「提前打烊」与「声音」按钮之间的空档，不被按钮遮挡
-	var hint := tr("接单 → 上工位 → 取走 → 上菜")
-	var hint_w: float = font.get_string_size(hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
-	draw_string(font, Vector2(540.0 + maxf(0.0, (295.0 - hint_w) / 2.0), GameLayout.H - 14), hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.4, 0.35, 0.3))
+	# 厨房区遮罩（让右侧工作区更沉、和客席区分开）
+	draw_rect(Rect2(GameLayout.W * 0.72, GameLayout.HUD_H, GameLayout.W * 0.28, GameLayout.H - GameLayout.HUD_H), Color(0.10, 0.08, 0.10, 0.18))
+
 
 
 func _draw_dirt() -> void:
 	var spots: int = GameState.dirt_spots()
 	for i in range(spots):
 		var p: Vector2 = GameLayout.DIRT_SPOTS[i]
-		draw_circle(p, 17.0, Color(0.42, 0.3, 0.16, 0.32))
-		draw_circle(p + Vector2(11, 7), 9.0, Color(0.42, 0.3, 0.16, 0.28))
-		draw_circle(p + Vector2(-9, 9), 7.0, Color(0.38, 0.26, 0.13, 0.28))
+		draw_circle(p, 17.0, Color(0.42, 0.3, 0.16, 0.26))
+		draw_circle(p + Vector2(11, 7), 9.0, Color(0.42, 0.3, 0.16, 0.22))
+		draw_circle(p + Vector2(-9, 9), 7.0, Color(0.38, 0.26, 0.13, 0.22))
 
 
 ## 装修效果可见化（v2 P2）：每级升级立刻看得见。
@@ -143,16 +169,17 @@ func _draw_customer(c: Dictionary, pos: Vector2, idx: int) -> void:
 	var sprite_mode := GameLayout.use_sprites and tex != null
 	if sprite_mode:
 		var s := r * 1.5
-		draw_circle(pos + Vector2(0, radius * 0.66), radius * 0.62, Color(0, 0, 0, 0.12))
+		draw_circle(pos + Vector2(0, radius * 0.66), radius * 0.62, Color(0, 0, 0, 0.14))
 		draw_texture_rect(tex, Rect2(pos.x - s / 2, pos.y - s / 2, s, s), false)
-		# 心情角标
-		var badge := pos + Vector2(radius * 0.8, -radius * 0.9)
+		# 心情角标（小圆徽章）
+		var badge_pos := pos + Vector2(radius * 0.72, -radius * 0.72)
+		UITheme.panel(self, Rect2(badge_pos - Vector2(9, 9), Vector2(18, 18)), Color(1, 1, 1, 0.92), 9, Color(0, 0, 0, 0.15), 1)
 		if mood > 0.5:
-			draw_arc(badge, 8.0 * scale, PI + 0.2, TAU - 0.2, 8, Color(0.2, 0.75, 0.35), 2.0)
+			draw_arc(badge_pos, 5.5 * scale, PI + 0.2, TAU - 0.2, 8, UITheme.GREEN.darkened(0.15), 2.0)
 		else:
-			draw_arc(badge, 8.0 * scale, 0.2, PI - 0.2, 8, Color(0.85, 0.25, 0.2), 2.0)
+			draw_arc(badge_pos, 5.5 * scale, 0.2, PI - 0.2, 8, UITheme.RED, 2.0)
 	else:
-		draw_circle(pos + Vector2(0, radius - 4), radius, Color(0, 0, 0, 0.12))
+		draw_circle(pos + Vector2(0, radius - 4), radius, Color(0, 0, 0, 0.14))
 		draw_circle(pos, r, body)
 		draw_arc(pos, r, 0, TAU, 32, Color(0, 0, 0, 0.25), 2.0)
 
@@ -172,34 +199,35 @@ func _draw_customer(c: Dictionary, pos: Vector2, idx: int) -> void:
 			pos + Vector2(0, -radius - 8),
 			pos + Vector2(-14, -radius + 6),
 			pos + Vector2(14, -radius + 6),
-		]), Color(0.9, 0.3, 0.55))
-		draw_circle(pos + Vector2(0, -radius - 10), 4, Color(1.0, 0.9, 0.3))
+		]), UITheme.RED)
+		draw_circle(pos + Vector2(0, -radius - 10), 4, UITheme.GOLD)
 
-	# 名牌（熟客 / 评论家）
+	# 名牌徽章（熟客 / 评论家）
 	if c["regular_id"] != "" or c.get("is_critic", false):
-		var name_color := Color(1.0, 0.9, 0.5) if c["regular_id"] != "" else Color(0.85, 0.7, 1.0)
-		var name_dy: float = -26.0 if sprite_mode else -66.0
-		draw_string(font, pos + Vector2(-radius, name_dy), tr(c["name"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, name_color)
+		var is_regular: bool = c["regular_id"] != ""
+		var name_dy: float = -31.0 if sprite_mode else -52.0
+		var name: String = tr(c["name"])
+		var nw: float = font.get_string_size(name, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x + 14
+		UITheme.badge(self, Rect2(pos + Vector2(-nw / 2, name_dy), Vector2(nw, 18)), name, font,
+			Color(0.42, 0.28, 0.16, 0.92) if is_regular else Color(0.32, 0.22, 0.42, 0.92),
+			Color(1.0, 0.88, 0.55) if is_regular else Color(0.90, 0.78, 1.0), 13)
 
-	# 头顶耐心条
+	# 头顶耐心条（胶囊）
 	var bar_w := radius * 2.0
-	var bar_dy: float = -56.0 if sprite_mode else -54.0
-	var bar_pos := pos + Vector2(-radius, bar_dy)
-	draw_rect(Rect2(bar_pos, Vector2(bar_w, 8)), Color(0, 0, 0, 0.4))
-	draw_rect(Rect2(bar_pos, Vector2(bar_w * mood, 8)), _patience_color(mood))
+	var bar_dy: float = -52.0 if sprite_mode else -72.0
+	UITheme.progress(self, Rect2(pos + Vector2(-radius, bar_dy), Vector2(bar_w, 8)), mood, _patience_color(mood))
 
-	# 门口等座倒计时：橙色递减条 + 秒数（让玩家看到谁快走了，优先处理）
+	# 门口等座倒计时：金色递减胶囊 + 秒数徽章（让玩家看到谁快走了）
 	if c.get("at_door", false):
 		var ratio: float = clampf(c["door_timer"] / CustomerSystem.DOOR_WAIT, 0.0, 1.0)
-		var dt_pos := pos + Vector2(-radius, bar_dy + 12)
-		draw_rect(Rect2(dt_pos, Vector2(bar_w, 6)), Color(0, 0, 0, 0.4))
-		draw_rect(Rect2(dt_pos, Vector2(bar_w * ratio, 6)), Color(0.95, 0.6, 0.2))
-		draw_string(font, dt_pos + Vector2(bar_w + 6, 7), "%ds" % ceili(c["door_timer"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.95, 0.7, 0.3))
+		UITheme.progress(self, Rect2(pos + Vector2(-radius, bar_dy + 11), Vector2(bar_w, 7)), ratio, UITheme.GOLD)
+		UITheme.badge(self, Rect2(pos + Vector2(radius + 6, bar_dy + 8), Vector2(34, 15)), "%ds" % ceili(c["door_timer"]), font, Color(0.45, 0.32, 0.10, 0.9), UITheme.GOLD, 11)
 
 	# 点单气泡
 	_draw_bubble(pos + Vector2(radius + 16, -radius), c)
 
 
+## 点单气泡：米白圆角卡片 + 投影 + 小尾巴 + 食物图标框。
 func _draw_bubble(pos: Vector2, c: Dictionary) -> void:
 	var progress := ""
 	if c["state"] == "dining":
@@ -220,47 +248,54 @@ func _draw_bubble(pos: Vector2, c: Dictionary) -> void:
 		progress = tr("（点我上菜）")
 	var text: String = tr(c["recipe_name"]) + progress
 
-	# 宽度按文字实际宽度自适应（如「奶茶（点我上工位）」不溢出）
-	var bw: float = maxf(128.0, font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x + 34.0)
-	var bh := 34.0
-	draw_rect(Rect2(pos, Vector2(bw, bh)), Color(1, 1, 1, 0.93))
-	draw_rect(Rect2(pos, Vector2(bw, bh)), Color(0.6, 0.55, 0.5), false, 1.5)
-	_draw_food(pos + Vector2(13, bh / 2), 7, c["recipe_id"])
-	draw_string(font, pos + Vector2(28, bh - 11), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.1, 0.1, 0.1))
+	var bw: float = maxf(150.0, font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x + 52.0)
+	var bh := 38.0
+	# 小尾巴（指向顾客）
+	draw_colored_polygon(PackedVector2Array([
+		pos + Vector2(2, 12), pos + Vector2(2, 26), pos + Vector2(-12, 16),
+	]), UITheme.CREAM)
+	UITheme.panel(self, Rect2(pos, Vector2(bw, bh)), UITheme.CREAM, 11, Color(0.35, 0.27, 0.20, 0.35), 1, 6, Vector2(0, 3))
+	# 食物图标框
+	UITheme.panel(self, Rect2(pos + Vector2(7, 5), Vector2(28, 28)), Color(1, 1, 1, 0.75), 8)
+	_draw_food(pos + Vector2(21, 19), 9, c["recipe_id"])
+	UITheme.label(self, font, pos + Vector2(42, 25), text, 15, UITheme.INK)
 
 
 # ---------- 餐桌 ----------
 
-## 餐桌：桌椅 + 用餐/脏盘状态（桌子画在顾客前面，像坐在桌后）。
+## 餐桌：圆角木纹桌面 + 阴影 + 椅子 + 用餐/脏盘状态徽章。
 func _draw_tables() -> void:
 	for i in range(GameState.seat_capacity()):
 		var seat: Dictionary = GameState.seats[i]
 		var p: Vector2 = GameLayout.SEAT_POS[i]
 		var level: int = GameState.shop["upgrades"]["decor"]
-		var top: Color = Color(0.72, 0.52, 0.32) if level == 0 else Color(0.86, 0.72, 0.52)
+		var top: Color = Color(0.68, 0.47, 0.28) if level == 0 else Color(0.80, 0.62, 0.40)
 		if level >= 3:
-			top = Color(0.92, 0.80, 0.62)
-		# 椅子
-		draw_rect(Rect2(p + Vector2(-118, -34), Vector2(30, 46)), Color(0.45, 0.32, 0.20), false, 0.0)
-		draw_rect(Rect2(p + Vector2(88, -34), Vector2(30, 46)), Color(0.45, 0.32, 0.20), false, 0.0)
-		# 桌面
-		draw_rect(Rect2(p + Vector2(-80, -18), Vector2(160, 52)), Color(0.35, 0.24, 0.14))
-		draw_rect(Rect2(p + Vector2(-76, -14), Vector2(152, 44)), top)
+			top = Color(0.88, 0.72, 0.50)
+		# 椅子（靠背 + 阴影）
+		for cx in [-118, 88]:
+			UITheme.panel(self, Rect2(p + Vector2(cx, -34), Vector2(30, 46)), Color(0.42, 0.28, 0.16), 8, Color(0, 0, 0, 0.18), 0, 4, Vector2(0, 2))
+			UITheme.panel(self, Rect2(p + Vector2(cx + 5, -30), Vector2(20, 12)), Color(0.52, 0.36, 0.21), 5)
 		# 桌腿
-		draw_rect(Rect2(p + Vector2(-60, 34), Vector2(12, 22)), Color(0.35, 0.24, 0.14))
-		draw_rect(Rect2(p + Vector2(48, 34), Vector2(12, 22)), Color(0.35, 0.24, 0.14))
+		draw_rect(Rect2(p + Vector2(-58, 32), Vector2(13, 24)), Color(0.32, 0.21, 0.12))
+		draw_rect(Rect2(p + Vector2(45, 32), Vector2(13, 24)), Color(0.32, 0.21, 0.12))
+		# 桌面（圆角 + 顶部高光 + 桌沿）
+		UITheme.panel(self, Rect2(p + Vector2(-82, -20), Vector2(164, 56)), Color(0, 0, 0, 0.20), 12, Color(0, 0, 0, 0), 0, 6, Vector2(0, 4))
+		UITheme.panel(self, Rect2(p + Vector2(-80, -22), Vector2(160, 54)), top.darkened(0.22), 12)
+		UITheme.panel(self, Rect2(p + Vector2(-76, -18), Vector2(152, 44)), top, 10)
+		UITheme.panel(self, Rect2(p + Vector2(-70, -15), Vector2(140, 10)), top.lightened(0.18), 6)
 		# 盘子状态：用餐中 / 脏盘待收
 		var diner := _seat_diner(seat)
 		if seat["dirty"]:
-			draw_circle(p + Vector2(0, 8), 17, Color(0.75, 0.75, 0.72))
-			draw_circle(p + Vector2(0, 8), 11, Color(0.62, 0.60, 0.55))
+			draw_circle(p + Vector2(0, 8), 17, Color(0.78, 0.78, 0.75))
+			draw_circle(p + Vector2(0, 8), 11, Color(0.64, 0.62, 0.57))
 			draw_circle(p + Vector2(4, 6), 4, Color(0.45, 0.32, 0.18, 0.8))
-			draw_string(font, p + Vector2(-32, -26), tr("点收桌"), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0.95, 0.6, 0.3))
+			UITheme.badge(self, Rect2(p + Vector2(-38, -44), Vector2(76, 20)), tr("点收桌"), font, UITheme.ACCENT.darkened(0.15), Color.WHITE, 13)
 		elif not diner.is_empty():
 			var ratio: float = clampf(diner["dine_timer"] / 8.0, 0.0, 1.0)
-			draw_circle(p + Vector2(0, 8), 17, Color(0.92, 0.92, 0.88))
-			draw_circle(p + Vector2(0, 8), 11, Color(0.85, 0.72, 0.5))
-			draw_circle(p + Vector2(0, 8), 11 * ratio, Color(0.92, 0.92, 0.88))
+			draw_circle(p + Vector2(0, 8), 17, Color(0.93, 0.93, 0.89))
+			draw_circle(p + Vector2(0, 8), 11, Color(0.86, 0.73, 0.51))
+			draw_circle(p + Vector2(0, 8), 11 * (1.0 - ratio), Color(0.93, 0.93, 0.89))
 
 
 func _seat_diner(seat: Dictionary) -> Dictionary:

@@ -1,6 +1,6 @@
 class_name TutorialView
 extends UIView
-## 新手引导遮罩：分步提示卡片。step = -1 表示不显示。
+## 新手引导遮罩：居中米白圆角卡片 + 深棕标题条 + 主题按钮。step = -1 表示不显示。
 
 
 const STEPS := [
@@ -33,10 +33,25 @@ func skip() -> void:
 func _draw() -> void:
 	if step < 0:
 		return
-	draw_rect(Rect2(0, 0, GameLayout.W, GameLayout.H), Color(0, 0, 0, 0.6))
-	draw_rect(GameLayout.TUTORIAL_RECT, Color(0.16, 0.16, 0.22))
-	draw_rect(GameLayout.TUTORIAL_RECT, Color(0.8, 0.8, 0.9), false, 2.0)
-	draw_string(font, GameLayout.TUTORIAL_RECT.position + Vector2(30, 42), tr("新手引导 (%d/%d)") % [step + 1, STEPS.size()], HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color(1.0, 0.9, 0.4))
-	draw_string(font, GameLayout.TUTORIAL_RECT.position + Vector2(30, 96), tr(STEPS[step]), HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color.WHITE)
-	_draw_button(GameLayout.TUTORIAL_NEXT_RECT, tr("下一步"), true)
-	_draw_button(GameLayout.TUTORIAL_SKIP_RECT, tr("跳过"), true)
+	# 遮罩
+	draw_rect(Rect2(0, 0, GameLayout.W, GameLayout.H), Color(0.12, 0.08, 0.06, 0.62))
+	var r := GameLayout.TUTORIAL_RECT
+	# 卡片：米白圆角 + 大投影
+	UITheme.panel(self, r.grow(14), Color(0, 0, 0, 0.30), 22)
+	UITheme.panel(self, r, UITheme.CREAM, 20, Color(0.35, 0.25, 0.16, 0.45), 2)
+	# 标题条
+	var header := Rect2(r.position + Vector2(0, 0), Vector2(r.size.x, 58))
+	UITheme.panel(self, Rect2(header.position + Vector2(0, 0), Vector2(header.size.x, 58)), UITheme.ESPRESSO, 20)
+	draw_rect(Rect2(header.position + Vector2(0, 38), Vector2(header.size.x, 20)), UITheme.ESPRESSO)
+	UITheme.label(self, font, r.position + Vector2(30, 39), tr("新手引导 (%d/%d)") % [step + 1, STEPS.size()], 20, UITheme.GOLD)
+	# 正文
+	UITheme.label(self, font, r.position + Vector2(30, 110), tr(STEPS[step]), 22, UITheme.INK)
+	# 步骤点（进度小圆点）
+	var n: int = STEPS.size()
+	var dot_w := n * 18
+	var dx: float = r.position.x + r.size.x / 2.0 - dot_w / 2.0
+	for i in range(n):
+		var active: bool = i == step
+		draw_circle(Vector2(dx + i * 18 + 4, r.position.y + r.size.y - 26), 5 if active else 3.5, UITheme.ACCENT if active else Color(0.72, 0.66, 0.56))
+	_draw_button(GameLayout.TUTORIAL_NEXT_RECT, tr("下一步"), true, "accent")
+	_draw_button(GameLayout.TUTORIAL_SKIP_RECT, tr("跳过"), true, "grey")

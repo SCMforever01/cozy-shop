@@ -31,7 +31,6 @@ const TOASTS := [
 const FLOATER_LIFETIME := 1.2
 
 var _floaters: Array = []  # {text, pos, age, color}
-var _rain: Array = []      # {x, y, speed}
 var _bound: Array = []     # {event, callable}，退出时取消订阅用
 
 
@@ -82,10 +81,6 @@ func _make_toast_handler(entry: Dictionary) -> Callable:
 # ---------- 特殊提示（带条件 / 带副作用） ----------
 
 func _on_weather_changed(weather_id: String) -> void:
-	if weather_id == "rain" or weather_id == "storm" or weather_id == "typhoon":
-		_spawn_rain()
-	else:
-		_rain.clear()
 	if weather_id == "typhoon":
 		spawn_floater(tr("台风来袭！建议歇业"), Color(0.9, 0.4, 0.4))
 	elif weather_id == "storm":
@@ -117,24 +112,10 @@ func _animate(delta: float) -> void:
 		f["pos"].y -= 45.0 * delta
 	_floaters = _floaters.filter(func(f): return f["age"] < FLOATER_LIFETIME)
 
-	for d in _rain:
-		d["y"] += d["speed"] * delta
-		if d["y"] > GameLayout.H:
-			d["y"] = -10.0
-			d["x"] = randf() * GameLayout.W
-
-
-func _spawn_rain() -> void:
-	_rain.clear()
-	for i in range(90):
-		_rain.append({"x": randf() * GameLayout.W, "y": randf() * GameLayout.H, "speed": 320.0 + randf() * 240.0})
-
 
 func _draw() -> void:
-	for d in _rain:
-		draw_line(Vector2(d["x"], d["y"]), Vector2(d["x"] - 2, d["y"] + 12), Color(0.4, 0.6, 0.9, 0.5), 1.5)
 	for f in _floaters:
 		var alpha := clampf(1.0 - f["age"] / FLOATER_LIFETIME, 0.0, 1.0)
 		var c: Color = f["color"]
 		c.a = alpha
-		draw_string(font, f["pos"], f["text"], HORIZONTAL_ALIGNMENT_CENTER, -1, 24, c)
+		UITheme.label(self, font, f["pos"], f["text"], 24, c, HORIZONTAL_ALIGNMENT_CENTER)

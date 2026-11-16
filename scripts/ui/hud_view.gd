@@ -1,11 +1,14 @@
 class_name HudView
 extends UIView
-## 顶部 HUD：日期 / 时间 / 季节 / 天气（含雨天加价）/ 金钱 / 食材 / 营业状态 / 卫生环境条 / 熟客状态。
+## 顶部 HUD：深棕圆角面板 + 描边文字 + 胶囊数值条。
 
 
 func _draw() -> void:
 	var w := GameLayout.W
-	draw_rect(Rect2(0, 0, w, GameLayout.HUD_H), Color(0.17, 0.17, 0.23))
+	# 顶栏：深棕面板 + 底部暖色分割线 + 投影
+	UITheme.panel(self, Rect2(0, -6, w, GameLayout.HUD_H + 6), UITheme.ESPRESSO, 0, Color(0, 0, 0, 0), 0, 8, Vector2(0, 3))
+	draw_rect(Rect2(0, GameLayout.HUD_H - 3, w, 3), UITheme.ACCENT.darkened(0.25))
+
 	var forecast := ""
 	if GameState.forecast_weather_id != "":
 		forecast = tr(" 明日:%s") % tr(Catalog.get_weather()[GameState.forecast_weather_id].display_name)
@@ -14,15 +17,15 @@ func _draw() -> void:
 		_weather_text(), forecast,
 		GameState.shop["money"], GameState.shop["ingredients"], _state_text(GameState.shop["day_state"]),
 	]
-	draw_string(font, Vector2(16, 36), line, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color.WHITE)
-	_draw_bar(Vector2(16, 58), 170, GameState.shop["hygiene"], tr("卫生"))
-	_draw_bar(Vector2(280, 58), 170, GameState.shop["environment"], tr("环境"))
+	UITheme.label(self, font, Vector2(16, 34), line, 20, Color(0.99, 0.96, 0.90))
+	_draw_bar(Vector2(16, 56), 170, GameState.shop["hygiene"], tr("卫生"))
+	_draw_bar(Vector2(280, 56), 170, GameState.shop["environment"], tr("环境"))
 	# 熟客状态：按主行实际宽度摆放（台风天溢价等长文案时不重叠），且不出右边界
 	var reg_text: String = tr("熟客:%s") % _regular_status()
 	var line_w: float = font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x
 	var reg_w: float = font.get_string_size(reg_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
 	var reg_x: float = clampf(16.0 + line_w + 24.0, 560.0, GameLayout.W - 16.0 - reg_w)
-	draw_string(font, Vector2(reg_x, 36), reg_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(1.0, 0.7, 0.8))
+	UITheme.label(self, font, Vector2(reg_x, 34), reg_text, 18, Color(1.0, 0.72, 0.62))
 
 
 func _state_text(s: String) -> String:
