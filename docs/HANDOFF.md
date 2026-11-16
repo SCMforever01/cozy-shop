@@ -174,6 +174,8 @@ godot --headless --script res://tests/test_shop.gd     # v2 采购/过期/升级
 godot --headless --script res://tests/test_audio.gd    # v2 音频加载/循环/开关
 godot --headless --script res://tests/test_catalog.gd  # 内容数据完整性/缓存
 godot --headless --script res://tests/test_save.gd     # 存档序列化/类型归一化
+# 平衡模拟（bot 按手速档位跑 N 天，输出 JSON 统计；详见 docs/PLAYTEST.md）
+godot --headless --script res://tools/balance_sim.gd -- --days=30 --delay=3 --speed=60 --seed=42 --tag=baseline
 # 冒烟测试（自动演示跑 N 帧）
 godot --headless --quit-after 20000 -- --autoplay
 # 新增/移动脚本后先刷新导入缓存再跑测试

@@ -87,6 +87,7 @@ scripts/ui/         # 渲染层（每层一个视图，纯绘制 + 动画）
   audio_controller.gd # 事件→音效映射（SFX_EVENTS 数据表）+ 氛围声
 scripts/audio_manager.gd # 音频底层（SFX 池 + BGM/雨/煎炒循环）
 scripts/auto_play.gd# 自动演示控制器（--autoplay）
+tools/balance_sim.gd # 平衡模拟器（bot 手速档位跑 N 天，输出数值统计）
 data/catalog.gd     # ⑤ 内容数据（菜谱/天气/升级，带缓存）
 data/translations.gd# 中英翻译表
 resources/          # 数据 schema（Recipe/WeatherType/CustomerType）
