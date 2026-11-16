@@ -14,3 +14,5 @@ extends Resource
 @export var unlock_reputation: int = 0
 ## 应季季节（spring/summer/autumn/winter，匹配时更受欢迎）
 @export var season: String = ""
+## 兜底颜色：没接食物贴图或「代码风格」模式下用纯色圆形表示这道菜
+@export var fallback_color: Color = Color.WHITE
