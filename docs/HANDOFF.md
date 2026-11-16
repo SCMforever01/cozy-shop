@@ -33,16 +33,20 @@ godot --headless --export-release "Web" build/web/index.html
 python3 serve.py 8090
 ```
 
-## 4. 架构（事件驱动 + 数据驱动）
+## 4. 架构（事件驱动 + 数据驱动 + 分层 UI）
 
 **核心原则：加机制 = 加一个 System + 订阅事件；加内容 = 加数据，不动逻辑。**
 
-- **autoload/**：`event_bus.gd`（事件总线）、`game_clock.gd`（游戏时钟）、`game_state.gd`（单一数据源）、`system_manager.gd`（系统注册）
-- **scripts/systems/**：每个机制一个 System（shop/weather/hygiene/customer/event/season/save/language）
-- **data/catalog.gd**：菜谱/天气/升级数据（加菜/天气只改这里）
+- **autoload/**：`event_bus.gd`（事件总线）、`game_clock.gd`（游戏时钟，`speed_multiplier` 同步缩放游戏分钟与真实秒机制）、`game_state.gd`（单一数据源 + 状态查询）、`system_manager.gd`（系统注册）
+- **scripts/systems/**：每个机制一个 System（shop/weather/hygiene/customer/kitchen/event/season/save/language）
+- **scripts/ui/**：渲染层，每层一个视图（`ui_view.gd` 基类 + shop/kitchen/hud/controls/fx/tutorial），
+  布局几何统一在 `game_layout.gd`（绘制与点击命中检测共用一份，不会错位）；
+  `audio_controller.gd` 把游戏事件映射到音效（SFX_EVENTS 数据表）并驱动氛围声
+- **scripts/auto_play.gd**：自动演示控制器（`--autoplay`）
+- **data/catalog.gd**：菜谱/天气/升级数据（带静态缓存；加菜/天气只改这里）
 - **data/translations.gd**：中英翻译表
 - **resources/**：Recipe/WeatherType/CustomerType 的 schema
-- **scenes/main.gd**：纯代码构建 UI + 渲染 + 交互（Node2D + `_draw()`）
+- **scenes/main.gd**：薄装配层——注册系统、组装视图、把点击路由到系统（约 190 行）
 
 ## 5. 关键坑（必读）
 
@@ -118,6 +122,15 @@ python3 serve.py 8090
 - **P3 决策感 ✅ 已完成**：升级扩到 5 选（拖把/快灶台/座位扩建/优质食材/装修，钱只够买一部分）；食材跨天保存 + 每天结束 20% 过期 + 大份囤货更划算（囤多浪费、囤少断货）；天气溢价进 HUD（雨+20%/暴雨+35%/台风+50%）；台风天二选一「开门搏一把 vs 台风歇业保库存」（歇业不过期），台风权重提到 10% 让玩家真能遇到。测试 `test_shop.gd` 10 例。
 - **音效 + 手机适配 ✅ 已完成**：BGM/雨声/煎炒声循环（自合成 wav）+ 12 个事件音效（Kenney CC0：interface-sounds / digital-audio / music-jingles）+ 声音开关按钮；手机端靠 `stretch/mode=canvas_items + aspect=keep` 等比缩放（刘海安全），小字号上调、点击区 ≥44px。测试 `test_audio.gd` 4 例。合成脚本 `make_audio.py`（会话工具目录，BGM 为 Cmaj7-Am7-Fmaj7-G6 80BPM 24 秒循环）。
 
+### ✅ 2026-11-16 重构（架构优化，玩法不变）
+
+- `main.gd` 913 行上帝对象拆分为 `scripts/ui/` 分层视图 + `GameLayout` 统一布局 + `AudioController` 音频接线 + `AutoPlay` 演示控制器，`main.gd` 只剩装配与输入路由
+- `Catalog` 静态缓存菜谱/天气/升级（原来每帧绘制时反复重建对象）；菜色从 `main.gd` 常量移入 `Recipe.fallback_color`（内容数据化）
+- 存档加固：`SAVE_VERSION` 版本号、JSON 数字 float→int 归一化、熟客只存可变字段、坏数据防御；序列化改纯函数可单测
+- 修复：装修升级环境值即时生效；演示模式 `--autoplay` 时间尺度错位（游戏时钟 10 倍速但做菜/拖地/用餐按真实秒计时，一天根本做不完一道菜）——`GameClock.speed_multiplier` 现在同步缩放两边
+- 事件提示（24 个 lambda）收敛为 `FxView.TOASTS` 数据表；事件→音效（12 条）收敛为 `AudioController.SFX_EVENTS` 数据表
+- 新增单测 `tests/test_catalog.gd`、`tests/test_save.gd`（共 9 套全绿，20000 帧冒烟日营收 ¥183~523）
+
 ### ⬜ 待做
 
 - 美术完善（更多路人 sprite、天气氛围背景、厨房大件家具）
@@ -155,8 +168,12 @@ godot --headless --script res://tests/test_kitchen.gd   # v2 工位/糊锅/拖�
 godot --headless --script res://tests/test_seats.gd    # v2 落座/用餐/留盘
 godot --headless --script res://tests/test_shop.gd     # v2 采购/过期/升级
 godot --headless --script res://tests/test_audio.gd    # v2 音频加载/循环/开关
+godot --headless --script res://tests/test_catalog.gd  # 内容数据完整性/缓存
+godot --headless --script res://tests/test_save.gd     # 存档序列化/类型归一化
 # 冒烟测试（自动演示跑 N 帧）
 godot --headless --quit-after 20000 -- --autoplay
+# 新增/移动脚本后先刷新导入缓存再跑测试
+godot --headless --import
 ```
 
 改渲染/贴图后建议做**网页视觉验证**：导出 Web 构建 → `python3 serve.py <端口>` → 用 Playwright（channel: chrome）截图走一遍「跳过引导 → 采购 → 开门 → 接单 → 做菜」，坐标参考：跳过 (459,469)、采购 (155,546)、开门 (115,676)、第一位客人 (250,140)、第一口锅 (1070,160)。
