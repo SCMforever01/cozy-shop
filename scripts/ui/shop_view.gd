@@ -14,6 +14,8 @@ const CUSTOMER_COLORS := [
 ]
 
 var _entered_at: Dictionary = {}  # customer_id -> 入场时间（做缩放入场动画）
+## 顾客最近绘制位置（供 +¥ 飘字跟随付钱客人；由 _animate 每帧刷新）
+static var last_customer_pos: Dictionary = {}
 var _rain: Array = []             # {x, y, speed} 雨滴（画在场景上、UI 之下）
 var _customer_textures: Dictionary = {}
 var _decor_textures: Dictionary = {}
@@ -68,12 +70,16 @@ func _animate(_delta: float) -> void:
 	for c in GameState.customers:
 		if not _entered_at.has(c["id"]):
 			_entered_at[c["id"]] = _t
+		last_customer_pos[c["id"]] = GameLayout.customer_draw_pos(GameState.customers, c)
 	var alive := {}
 	for c in GameState.customers:
 		alive[c["id"]] = true
 	for id in _entered_at.keys():
 		if not alive.has(id):
 			_entered_at.erase(id)
+	for id in last_customer_pos.keys():
+		if not alive.has(id):
+			last_customer_pos.erase(id)
 
 
 func _draw() -> void:
@@ -199,6 +205,7 @@ func _draw_customers() -> void:
 	for i in range(n):
 		var c: Dictionary = GameState.customers[i]
 		_draw_customer(c, GameLayout.customer_draw_pos(GameState.customers, c), i, ofs[i])
+	_draw_door_aggregate()
 	# 第二遍：点单气泡统一画在最上层（高峰时不被倒计时芯片/名牌盖住）
 	for i in range(n):
 		var c2: Dictionary = GameState.customers[i]
@@ -306,16 +313,25 @@ func _draw_customer(c: Dictionary, pos: Vector2, idx: int, bubble_ofs: Vector2 =
 	if c.get("at_door", false):
 		UITheme.badge(self, Rect2(pos + Vector2(radius + 4, bar_dy - 3 + (idx % 2) * 10.0), Vector2(34, 15)), "%ds" % ceili(c["door_timer"]), font, Color(0.45, 0.32, 0.10, 0.92), UITheme.GOLD, 11)
 
-	# 排队客人收成小徽章；点单气泡由 _draw_customers 最后统一画（独立图层，不被遮挡）
-	if c.get("at_door", false) and GameLayout.door_index(GameState.customers, c) > 0:
-		_draw_queue_chip(pos, c, radius)
+	# 等位客人不画逐人徽章（聚合气泡由 _draw_customers 统一画）；点单气泡最后统一画
 
 
-## 排队小徽章：只显示菜品图标（秒数挂在耐心条右端，避免三层叠压）。
-func _draw_queue_chip(pos: Vector2, c: Dictionary, radius: float) -> void:
-	var chip := Rect2(pos + Vector2(20, -radius - 10), Vector2(30, 24))
-	UITheme.panel(self, chip, UITheme.CREAM, 8, Color(0.35, 0.27, 0.20, 0.35), 1, 3, Vector2(0, 2))
-	_draw_food(chip.position + Vector2(15, 12), 8, c["recipe_id"])
+## 等位聚合气泡：队首一枚「等座 N 人（最快 Xs）」，替代逐人徽章（高峰不再叠压）。
+func _draw_door_aggregate() -> void:
+	var waiting: Array = []
+	for c in GameState.customers:
+		if c.get("at_door", false):
+			waiting.append(c)
+	if waiting.is_empty():
+		return
+	var fastest := 999.0
+	for c in waiting:
+		fastest = minf(fastest, c["door_timer"])
+	var text: String = tr("等座 %d 人（最快 %ds）") % [waiting.size(), ceili(fastest)]
+	var w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x + 26.0
+	var anchor: Vector2 = GameLayout.door_queue_pos(0) + Vector2(0, -86)
+	UITheme.panel(self, Rect2(anchor, Vector2(w, 26)), UITheme.CREAM, 9, Color(0.35, 0.27, 0.20, 0.4), 1, 5, Vector2(0, 3))
+	UITheme.label(self, font, anchor + Vector2(13, 18), text, 14, UITheme.INK)
 
 
 ## 气泡完整文本（内容随状态变化）。

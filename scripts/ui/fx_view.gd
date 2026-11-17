@@ -7,7 +7,6 @@ extends UIView
 
 ## 事件 -> 飘字提示：fmt 为翻译键，args 为 payload 字段名（字符串值自动 tr，数值自动取整）。
 const TOASTS := [
-	{"event": "customer.served", "fmt": "+¥%d", "args": ["earned"], "color": Color(0.2, 0.8, 0.3)},
 	{"event": "customer.left_angry", "fmt": "差评 -1", "args": [], "color": Color(0.9, 0.3, 0.3)},
 	{"event": "customer.left_no_seat", "fmt": "没座位，客人走了", "args": [], "color": Color(0.85, 0.55, 0.4)},
 	{"event": "day.summary", "fmt": "第%d天营收¥%d", "args": ["day", "earned"], "color": Color(0.95, 0.85, 0.25)},
@@ -44,6 +43,7 @@ func _ready() -> void:
 		EventBus.subscribe(entry["event"], cb)
 		_bound.append({"event": entry["event"], "callable": cb})
 	EventBus.subscribe("weather.changed", _on_weather_changed)
+	EventBus.subscribe("customer.served", _on_customer_served)
 	EventBus.subscribe("customer.entered", _on_customer_entered)
 	EventBus.subscribe("season.changed", _on_season_changed)
 	EventBus.subscribe("kitchen.blocked", _on_kitchen_blocked)
@@ -62,6 +62,7 @@ func _ready() -> void:
 
 
 func _exit_tree() -> void:
+	EventBus.unsubscribe("customer.served", _on_customer_served)
 	for b in _bound:
 		EventBus.unsubscribe(b["event"], b["callable"])
 	EventBus.unsubscribe("weather.changed", _on_weather_changed)
@@ -75,15 +76,24 @@ func spawn_tap(pos: Vector2) -> void:
 	_taps.append({"pos": pos, "age": 0.0})
 
 
+## +¥ 飘字跟随付钱客人头顶（最近绘制位置，客人已离场则回屏幕中央）。
+func _on_customer_served(p) -> void:
+	var pos: Vector2 = Vector2(GameLayout.W * 0.5, GameLayout.H * 0.45)
+	if ShopView.last_customer_pos.has(p["id"]):
+		pos = ShopView.last_customer_pos[p["id"]] + Vector2(0, -70)
+	spawn_floater("+¥%d" % int(p["earned"]), Color(0.2, 0.8, 0.3), pos)
+
+
 ## 生成一条飘字提示（其他层也调用它，如「已读档」「进度已重置」）。
-func spawn_floater(text: String, color: Color) -> void:
+## pos 省略时落在屏幕中央（槽位错开，同屏多条上下分层不压字）。
+func spawn_floater(text: String, color: Color, pos: Variant = null) -> void:
 	print(text)
-	# 槽位错开：同一区域多条飘字上下分层，不再互相压字
+	var base: Vector2 = Vector2(GameLayout.W * 0.5, GameLayout.H * 0.45) if pos == null else pos
 	var slot := 0
 	for f in _floaters:
 		if f["slot"] == slot:
 			slot += 1
-	_floaters.append({"text": text, "pos": Vector2(GameLayout.W * 0.5, GameLayout.H * 0.45 - slot * 46.0), "age": 0.0, "color": color, "slot": slot})
+	_floaters.append({"text": text, "pos": base + Vector2(0, -slot * 46.0), "age": 0.0, "color": color, "slot": slot})
 
 
 ## 日结面板是否显示中（输入层据此把点击/按键当"继续"）。

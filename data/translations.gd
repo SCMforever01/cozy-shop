@@ -28,6 +28,7 @@ static func get_en() -> Dictionary:
 		"卫生检查要来了！快拖地": "Inspection coming! Mop now",
 		"点击 / 按任意键继续": "Click / press any key to continue",
 		"空格": "Space",
+		"等座 %d 人（最快 %ds）": "Waiting %d (soonest %ds)",
 		"服务 %d 单 · 糊锅 %d 次 · 气走/流失 %d 位": "Served %d · Burnt %d · Lost %d",
 		"食材浪费 %d 份 · 口碑 %d": "Wasted %d ingredients · Rep %d",
 		"→%s": "→ %s",

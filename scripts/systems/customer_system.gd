@@ -345,7 +345,7 @@ func serve(customer_id: int) -> void:
 	# 上菜后坐下用餐 5~8 秒，吃完留脏盘（v2 P2）
 	c["state"] = "dining"
 	c["dine_timer"] = 5.0 + randf() * 3.0
-	EventBus.emit("customer.served", {"name": c["name"], "earned": earned})
+	EventBus.emit("customer.served", {"id": c["id"], "name": c["name"], "earned": earned})
 
 
 func _find(customer_id: int) -> Dictionary:

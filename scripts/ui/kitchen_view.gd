@@ -53,6 +53,9 @@ func _draw_station(s: Dictionary, pos: Vector2) -> void:
 	# 玻璃卡片：深棕 + 亮边 + 投影
 	UITheme.panel(self, rect, Color(0.19, 0.15, 0.14, 0.93), 14, Color(1, 1, 1, 0.12), 1, 8, Vector2(0, 4))
 	UITheme.label(self, font, rect.position + Vector2(12, 24), tr(s["name"]), 15, Color(1.0, 0.93, 0.82))
+	# 键帽：标注 1~4 快捷键（与多步流水线的对应关系一眼可见）
+	UITheme.panel(self, Rect2(rect.position + Vector2(124, 8), Vector2(22, 20)), Color(0.28, 0.23, 0.20, 0.92), 5, Color(1, 1, 1, 0.18), 1)
+	UITheme.label(self, font, rect.position + Vector2(131, 23), str(s["id"] + 1), 13, Color(0.95, 0.90, 0.78))
 	# 工位设备图标（左上角）
 	if _icons.is_empty():
 		for k in ["prep", "stove", "plate"]:
