@@ -25,6 +25,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         super().__init__(*args, directory=DIR, **kwargs)
 
     def end_headers(self):
+        # 禁缓存：开发迭代时部署立即生效（此前多次被浏览器缓存旧构建坑）
+        self.send_header("Cache-Control", "no-store, must-revalidate")
         # 跨源隔离（Godot Web 需要）
         self.send_header("Cross-Origin-Opener-Policy", "same-origin")
         self.send_header("Cross-Origin-Embedder-Policy", "require-corp")

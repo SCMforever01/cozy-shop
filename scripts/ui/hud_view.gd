@@ -68,4 +68,4 @@ func _regular_status() -> String:
 		elif r["relationship"] < 0:
 			s += tr("(疏远)")
 		parts.append(s)
-	return "、".join(parts) if not parts.is_empty() else tr("无")
+	return tr("、").join(parts) if not parts.is_empty() else tr("无")

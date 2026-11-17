@@ -32,7 +32,7 @@ const FLOATER_LIFETIME := 1.2
 var _floaters: Array = []  # {text, pos, age, color}
 var _taps: Array = []      # 点击反馈：{pos, age} 扩散圆环
 var _summary: Dictionary = {}   # 日结面板：{day, earned, served, burnt, angry, spoiled, age}
-var _day_stats := {"served": 0, "burnt": 0, "angry": 0, "spoiled": 0, "income": 0, "expense": 0, "fine": 0}
+var _day_stats := {"served": 0, "burnt": 0, "angry": 0, "noseat": 0, "spoiled": 0, "income": 0, "buy": 0, "invest": 0, "fine": 0}
 var _warned_closing: bool = false
 var _bound: Array = []     # {event, callable}，退出时取消订阅用
 
@@ -52,11 +52,15 @@ func _ready() -> void:
 	EventBus.subscribe("customer.served", func(p):
 		_day_stats["served"] += 1
 		_day_stats["income"] += int(p["earned"]))
-	EventBus.subscribe("shop.expense", func(p): _day_stats["expense"] += int(p["amount"]))
+	EventBus.subscribe("shop.expense", func(p):
+		if str(p.get("kind", "")) == "upgrade":
+			_day_stats["invest"] += int(p["amount"])
+		else:
+			_day_stats["buy"] += int(p["amount"]))
 	EventBus.subscribe("event.inspect_fail", func(p): _day_stats["fine"] += int(p["fine"]))
 	EventBus.subscribe("kitchen.burnt", func(_p): _day_stats["burnt"] += 1)
 	EventBus.subscribe("customer.left_angry", func(_p): _day_stats["angry"] += 1)
-	EventBus.subscribe("customer.left_no_seat", func(_p): _day_stats["angry"] += 1)
+	EventBus.subscribe("customer.left_no_seat", func(_p): _day_stats["noseat"] += 1)
 	EventBus.subscribe("ingredients.spoiled", func(_p): _day_stats["spoiled"] += 1)
 	EventBus.subscribe("clock.tick", _on_tick)
 
@@ -127,9 +131,9 @@ func _draw_summary_panel() -> void:
 	var earned: int = _summary["earned"]
 	_center_text(cy - h / 2 + 36, tr("第 %d 天 · 营业结算") % _summary["day"], 22, UITheme.INK)
 	_center_text(cy - 22, tr("净收入 ¥%d") % earned, 26, UITheme.GREEN if earned >= 0 else UITheme.RED)
-	_center_text(cy + 8, tr("服务收入 +¥%d · 支出 -¥%d") % [_summary["income"], _summary["expense"]], 15, UITheme.INK_SOFT)
-	_center_text(cy + 34, tr("服务 %d 单 · 糊锅 %d 次 · 气走/流失 %d 位") % [_summary["served"], _summary["burnt"], _summary["angry"]], 15, UITheme.INK_SOFT)
-	_center_text(cy + 60, tr("罚款 -¥%d · 食材浪费 %d 份 · 口碑 %+d") % [_summary["fine"], _summary["spoiled"], GameState.shop["reputation"]], 15, UITheme.INK_SOFT)
+	_center_text(cy + 8, tr("服务收入 +¥%d · 采购 -¥%d · 罚款 -¥%d") % [_summary["income"], _summary["buy"], _summary["fine"]], 15, UITheme.INK_SOFT)
+	_center_text(cy + 34, tr("服务 %d 单 · 糊锅 %d 次 · 升级投资 -¥%d") % [_summary["served"], _summary["burnt"], _summary["invest"]], 15, UITheme.INK_SOFT)
+	_center_text(cy + 60, tr("气走 %d 位 · 没座走 %d 位 · 浪费 %d 份 · 口碑 %+d") % [_summary["angry"], _summary["noseat"], _summary["spoiled"], GameState.shop["reputation"]], 15, UITheme.INK_SOFT)
 	_center_text(cy + 88, tr("点击 / 按任意键继续"), 14, Color(0.55, 0.48, 0.40))
 
 
@@ -172,9 +176,9 @@ func _on_customer_entered(p) -> void:
 func _on_day_summary(p) -> void:
 	_summary = {"day": p["day"], "earned": p["earned"], "age": 0.0,
 		"served": _day_stats["served"], "burnt": _day_stats["burnt"],
-		"angry": _day_stats["angry"], "spoiled": _day_stats["spoiled"],
-		"income": _day_stats["income"], "expense": _day_stats["expense"], "fine": _day_stats["fine"]}
-	_day_stats = {"served": 0, "burnt": 0, "angry": 0, "spoiled": 0, "income": 0, "expense": 0, "fine": 0}
+		"angry": _day_stats["angry"], "noseat": _day_stats["noseat"], "spoiled": _day_stats["spoiled"],
+		"income": _day_stats["income"], "buy": _day_stats["buy"], "invest": _day_stats["invest"], "fine": _day_stats["fine"]}
+	_day_stats = {"served": 0, "burnt": 0, "angry": 0, "noseat": 0, "spoiled": 0, "income": 0, "buy": 0, "invest": 0, "fine": 0}
 	_warned_closing = false
 
 

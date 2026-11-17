@@ -253,9 +253,11 @@ func _draw_customer(c: Dictionary, pos: Vector2, idx: int, bubble_ofs: Vector2 =
 		var badge_pos := pos + Vector2(radius * 0.72, -radius * 0.72)
 		UITheme.panel(self, Rect2(badge_pos - Vector2(9, 9), Vector2(18, 18)), Color(1, 1, 1, 0.92), 9, Color(0, 0, 0, 0.15), 1)
 		if mood > 0.5:
-			draw_arc(badge_pos, 5.5 * scale, PI + 0.2, TAU - 0.2, 8, UITheme.GREEN.darkened(0.15), 2.0)
+			draw_line(badge_pos + Vector2(-5, -2), badge_pos, UITheme.GREEN.darkened(0.15), 2.0)
+			draw_line(badge_pos, badge_pos + Vector2(5, -2), UITheme.GREEN.darkened(0.15), 2.0)
 		else:
-			draw_arc(badge_pos, 5.5 * scale, 0.2, PI - 0.2, 8, UITheme.RED, 2.0)
+			draw_line(badge_pos + Vector2(-5, 2), badge_pos, UITheme.RED, 2.0)
+			draw_line(badge_pos, badge_pos + Vector2(5, 2), UITheme.RED, 2.0)
 	else:
 		draw_circle(pos + Vector2(0, radius - 4), radius, Color(0, 0, 0, 0.14))
 		draw_circle(pos, r, body)
@@ -265,11 +267,14 @@ func _draw_customer(c: Dictionary, pos: Vector2, idx: int, bubble_ofs: Vector2 =
 		draw_circle(pos + Vector2(-11 * scale, -8 * scale), 3.5 * scale, Color(0.1, 0.1, 0.1))
 		draw_circle(pos + Vector2(11 * scale, -8 * scale), 3.5 * scale, Color(0.1, 0.1, 0.1))
 
-		# 嘴（心情）
+		# 嘴（心情）。折线画法（坐标即形状，不依赖弧度方向语义）：微笑=V 形，难过=倒 V
+		var mouth_c := pos + Vector2(0, 8 * scale)
 		if mood > 0.5:
-			draw_arc(pos + Vector2(0, 4), 10 * scale, PI + 0.15, TAU - 0.15, 12, Color(0.1, 0.1, 0.1), 2.0)
+			draw_line(mouth_c + Vector2(-11, -4) * scale, mouth_c + Vector2(0, 5) * scale, Color(0.1, 0.1, 0.1), 2.5)
+			draw_line(mouth_c + Vector2(0, 5) * scale, mouth_c + Vector2(11, -4) * scale, Color(0.1, 0.1, 0.1), 2.5)
 		else:
-			draw_arc(pos + Vector2(0, 12), 10 * scale, 0.15, PI - 0.15, 12, Color(0.1, 0.1, 0.1), 2.0)
+			draw_line(mouth_c + Vector2(-11, 4) * scale, mouth_c + Vector2(0, -5) * scale, Color(0.1, 0.1, 0.1), 2.5)
+			draw_line(mouth_c + Vector2(0, -5) * scale, mouth_c + Vector2(11, 4) * scale, Color(0.1, 0.1, 0.1), 2.5)
 
 	# 生气怒纹（耐心告急）
 	if mood < 0.3:

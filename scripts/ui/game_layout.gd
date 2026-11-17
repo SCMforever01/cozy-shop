@@ -41,8 +41,9 @@ const DIRT_SPOTS := [
 	Vector2(430, 610), Vector2(700, 540), Vector2(150, 560), Vector2(600, 260),
 	Vector2(840, 420), Vector2(120, 380), Vector2(520, 430), Vector2(760, 640),
 ]
-## 3 张餐桌（桌面中心点），对应 GameState.seats 的 id
-const SEAT_POS := [Vector2(250, 300), Vector2(620, 300), Vector2(435, 470)]
+## 餐桌位置（桌面中心点），对应 GameState.seats 的 id——数量须覆盖全部座位。
+## 第 4 桌（座位扩建后解锁）：窗边位。
+const SEAT_POS := [Vector2(250, 300), Vector2(620, 300), Vector2(435, 470), Vector2(435, 185)]
 ## 门口等座区（满座时客人站这里，10 秒没座就走）
 const DOOR_POS := Vector2(740, 545)
 

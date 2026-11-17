@@ -71,6 +71,10 @@ func _initialize() -> void:
 	_check(not still_here, "门口超时客人离开")
 	_check(GS.shop["reputation"] == rep_before, "满座走人不扣口碑")
 
+	# 用例 6：座位布局必须覆盖全部座位（防止扩建后越界）
+	var L = load("res://scripts/ui/game_layout.gd")
+	_check(L.SEAT_POS.size() >= GS.seats.size(), "SEAT_POS 覆盖全部 %d 个座位" % GS.seats.size())
+
 	if _failed == 0:
 		print("PASS: seats 全部用例通过")
 	quit(1 if _failed > 0 else 0)
