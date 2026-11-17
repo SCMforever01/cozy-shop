@@ -22,23 +22,23 @@ const SFX_EVENTS := [
 	{"event": "clock.day_started", "key": "open", "volume": -10.0},
 	{"event": "weather.changed", "key": "typhoon", "volume": -2.0, "only": "typhoon"},
 	# 角色语音（Breeze TTS）
-	{"event": "shop.opened", "key": "voice_welcome", "volume": -2.0},
+	{"event": "shop.opened", "key": "voice_welcome", "volume": -3.0},
 	{"event": "customer.entered", "key": "voice_laozhang", "volume": -3.0, "match": {"key": "name", "value": "老张"}},
 	{"event": "customer.entered", "key": "voice_xiaowang", "volume": -3.0, "match": {"key": "name", "value": "小王"}},
 	{"event": "customer.entered", "key": "voice_lijie", "volume": -3.0, "match": {"key": "name", "value": "李姐"}},
 	{"event": "customer.entered", "key": "voice_critic", "volume": -3.0, "match": {"key": "name", "value": "美食评论家"}},
-	{"event": "regular.celebrate", "key": "voice_birthday", "volume": -2.0},
-	{"event": "customer.served", "key": "voice_thanks", "volume": -4.0, "chance": 0.3},
+	{"event": "regular.celebrate", "key": "voice_birthday", "volume": -3.0},
+	{"event": "customer.served", "key": "voice_thanks", "volume": -3.0, "chance": 0.3},
 	{"event": "customer.left_angry", "key": "voice_angry", "volume": -3.0, "chance": 0.5},
 	# 反应 / 拟声类音效
-	{"event": "order.taken", "key": "voice_ok", "volume": -4.0, "chance": 0.6},
+	{"event": "order.taken", "key": "voice_ok", "volume": -3.0, "chance": 0.6},
 	{"event": "customer.served", "key": "voice_serve", "volume": -3.0, "chance": 0.7},
-	{"event": "dish.ready", "key": "voice_ding", "volume": -4.0, "chance": 0.5},
-	{"event": "kitchen.burnt", "key": "voice_burn", "volume": -2.0},
-	{"event": "hygiene.mopped", "key": "voice_mop", "volume": -4.0, "chance": 0.5},
+	{"event": "dish.ready", "key": "voice_ding", "volume": -3.0, "chance": 0.5},
+	{"event": "kitchen.burnt", "key": "voice_burn", "volume": -3.0},
+	{"event": "hygiene.mopped", "key": "voice_mop", "volume": -3.0, "chance": 0.5},
 	{"event": "day.summary", "key": "voice_bye", "volume": -3.0},
-	{"event": "customer.left_no_seat", "key": "voice_noseat", "volume": -4.0, "chance": 0.6},
-	{"event": "customer.dined", "key": "voice_yummy", "volume": -4.0, "chance": 0.4},
+	{"event": "customer.left_no_seat", "key": "voice_noseat", "volume": -3.0, "chance": 0.6},
+	{"event": "customer.dined", "key": "voice_yummy", "volume": -3.0, "chance": 0.4},
 ]
 
 var audio: AudioManager
