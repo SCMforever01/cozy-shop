@@ -199,6 +199,12 @@ func _draw_customers() -> void:
 	for i in range(n):
 		var c: Dictionary = GameState.customers[i]
 		_draw_customer(c, GameLayout.customer_draw_pos(GameState.customers, c), i, ofs[i])
+	# 第二遍：点单气泡统一画在最上层（高峰时不被倒计时芯片/名牌盖住）
+	for i in range(n):
+		var c2: Dictionary = GameState.customers[i]
+		if c2.get("at_door", false) and GameLayout.door_index(GameState.customers, c2) > 0:
+			continue
+		_draw_bubble(GameLayout.customer_draw_pos(GameState.customers, c2) + Vector2(48, -32), c2, ofs[i])
 
 
 func _customer_texture(c: Dictionary) -> Texture2D:
@@ -300,11 +306,9 @@ func _draw_customer(c: Dictionary, pos: Vector2, idx: int, bubble_ofs: Vector2 =
 	if c.get("at_door", false):
 		UITheme.badge(self, Rect2(pos + Vector2(radius + 4, bar_dy - 3 + (idx % 2) * 10.0), Vector2(34, 15)), "%ds" % ceili(c["door_timer"]), font, Color(0.45, 0.32, 0.10, 0.92), UITheme.GOLD, 11)
 
-	# 点单气泡：队首完整显示，其余排队客人收成小徽章（避免人塔气泡互叠）
+	# 排队客人收成小徽章；点单气泡由 _draw_customers 最后统一画（独立图层，不被遮挡）
 	if c.get("at_door", false) and GameLayout.door_index(GameState.customers, c) > 0:
 		_draw_queue_chip(pos, c, radius)
-	else:
-		_draw_bubble(pos + Vector2(radius + 16, -radius), c, bubble_ofs)
 
 
 ## 排队小徽章：只显示菜品图标（秒数挂在耐心条右端，避免三层叠压）。

@@ -54,6 +54,7 @@ func buy_upgrade(category: String) -> void:
 		return
 	GameState.shop["money"] -= cost
 	GameState.shop["upgrades"][category] = level + 1
+	EventBus.emit("shop.expense", {"amount": cost, "kind": "upgrade"})
 	if category == "decor":
 		# 装修升级即时提升环境，不用等到第二天
 		GameState.refresh_environment(GameState.weather_modifiers["environment"])
@@ -66,3 +67,4 @@ func buy_ingredients(amount: int, cost: int) -> void:
 		return
 	GameState.shop["money"] -= cost
 	GameState.shop["ingredients"] += amount
+	EventBus.emit("shop.expense", {"amount": cost, "kind": "buy"})

@@ -56,6 +56,8 @@ func _on_tick(minute) -> void:
 		EventBus.emit("event.food_critic")
 	if minute == _rush_minute:
 		EventBus.emit("event.rush_hour")
+	if minute == _inspect_minute - 6:
+		EventBus.emit("event.inspect_warning", {})
 	if minute == _inspect_minute:
 		_check_inspection()
 	if minute == _break_minute:
