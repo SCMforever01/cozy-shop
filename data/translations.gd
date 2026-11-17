@@ -24,6 +24,7 @@ static func get_en() -> Dictionary:
 		"第 %d 天 · 营业结算": "Day %d · Closing Summary",
 		"营收 ¥%d": "Revenue ¥%d",
 		"点击 / 按任意键继续": "Click / press any key to continue",
+		"空格": "Space",
 		"服务 %d 单 · 糊锅 %d 次 · 气走/流失 %d 位": "Served %d · Burnt %d · Lost %d",
 		"食材浪费 %d 份 · 口碑 %d": "Wasted %d ingredients · Rep %d",
 		"→%s": "→ %s",
@@ -165,11 +166,11 @@ static func get_en() -> Dictionary:
 		"节日促销！今日菜品加价30%": "Holiday sale! Dishes +30% today",
 		# 教程
 		"新手引导 (%d/%d)": "Tutorial (%d/%d)",
-		"欢迎开店！点下方「开门营业」开始营业": "Welcome! Click 'Open Shop' to start",
+		"欢迎开店！点下方「开门营业」（或按 O）开始营业": "Welcome! Click 'Open Shop' (or press O) to start",
 		"客人进店点单，点客人「接单」": "Customers order; click a customer to take the order",
 		"点厨房里的菜上工位，步骤自动计时；灶台做好趁热取走，晚了糊锅": "Tap a dish to put it on a station; steps run on timers. Take stove food before it burns",
 		"做完变发光盘子，点它「上菜」收钱": "When done it becomes a glowing plate; click to serve",
-		"多线忙不过来时按顺序救火：收桌 → 上菜 → 取锅 → 接单 → 派工位": "Busy? Triage: clear tables → serve → save pots → orders → dispatch",
+		"多线忙不过来时按顺序救火：收桌 → 上菜 → 取锅 → 接单 → 派工位（空格键一键代劳）": "Busy? Triage: clear → serve → save pots → orders → dispatch (Space does it)",
 		"地面变脏点「拖地」（要花 3 秒，期间做不了菜），脏店客人没耐心": "Mop dirty floors (takes 3s and blocks cooking); a dirty shop annoys customers",
 		"每天结束自动存档，开店前点绿色按钮升级设备": "Auto-save each day; upgrade before opening",
 	}

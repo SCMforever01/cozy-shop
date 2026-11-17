@@ -356,6 +356,20 @@ func _draw_bubble(pos: Vector2, c: Dictionary, extra_ofs: Vector2 = Vector2.ZERO
 	UITheme.panel(self, Rect2(pos + Vector2(7, 5), Vector2(28, 28)), Color(1, 1, 1, 0.75), 8)
 	_draw_food(pos + Vector2(21, 19), 9, c["recipe_id"])
 	UITheme.label(self, font, pos + Vector2(42, 25), text, 15, UITheme.INK)
+	# 可操作气泡带按键提示（空格=分诊键，一键代劳）
+	if _is_actionable(c):
+		var cap := Rect2(pos + Vector2(bw - 46, bh + 2), Vector2(42, 17))
+		UITheme.panel(self, cap, Color(0.28, 0.23, 0.20, 0.92), 5, Color(1, 1, 1, 0.18), 1)
+		UITheme.label(self, font, cap.position + Vector2(6, 13), tr("空格"), 11, Color(0.95, 0.90, 0.78))
+
+
+## 气泡是否对应可按空格推进的操作。
+func _is_actionable(c: Dictionary) -> bool:
+	if c["state"] == "waiting":
+		return not c.get("at_door", false)
+	if c["state"] == "being_served":
+		return c["cook"]["phase"] != "cooking"
+	return c["state"] == "ready"
 
 
 # ---------- 餐桌 ----------
