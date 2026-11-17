@@ -95,6 +95,9 @@ func _input(event: InputEvent) -> void:
 
 func _handle_key(keycode: Key) -> void:
 	match keycode:
+		KEY_ESCAPE:
+			if _tutorial_view.is_active():
+				_tutorial_view.skip()
 		KEY_SPACE:
 			# 分诊键：按数据验证的顺序做下一件最该做的事
 			_triage_action()

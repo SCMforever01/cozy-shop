@@ -176,9 +176,29 @@ func _draw_sun() -> void:
 # ---------- 顾客 ----------
 
 func _draw_customers() -> void:
-	for i in range(GameState.customers.size()):
+	# 气泡防重叠：先算好每个气泡的位置（重叠就上移避让），再统一绘制
+	var n := GameState.customers.size()
+	var ofs: Array = []
+	ofs.resize(n)
+	var placed: Array = []  # 已放置的气泡矩形
+	for i in range(n):
 		var c = GameState.customers[i]
-		_draw_customer(c, GameLayout.customer_draw_pos(GameState.customers, c), i)
+		var anchor: Vector2 = GameLayout.customer_draw_pos(GameState.customers, c) + Vector2(48, -32)
+		var rect := Rect2(anchor, Vector2(_bubble_width(c), 34.0))
+		for _k in range(6):
+			var hit := false
+			for pr in placed:
+				if rect.grow(5.0).intersects(pr):
+					rect = Rect2(rect.position - Vector2(0, 38.0), rect.size)
+					hit = true
+					break
+			if not hit:
+				break
+		placed.append(rect)
+		ofs[i] = rect.position - anchor
+	for i in range(n):
+		var c: Dictionary = GameState.customers[i]
+		_draw_customer(c, GameLayout.customer_draw_pos(GameState.customers, c), i, ofs[i])
 
 
 func _customer_texture(c: Dictionary) -> Texture2D:
@@ -189,7 +209,7 @@ func _customer_texture(c: Dictionary) -> Texture2D:
 	return _customer_textures.get("g%d" % (int(c["id"]) % 6)) as Texture2D
 
 
-func _draw_customer(c: Dictionary, pos: Vector2, idx: int) -> void:
+func _draw_customer(c: Dictionary, pos: Vector2, idx: int, bubble_ofs: Vector2 = Vector2.ZERO) -> void:
 	# 待机浮动：轻微上下摆 + 左右摇，让画面活起来
 	pos += Vector2(sin(_t * 2.0 + idx * 1.7) * 1.2, sin(_t * 3.1 + idx * 2.3) * 1.6)
 	var radius := 32.0
@@ -284,7 +304,7 @@ func _draw_customer(c: Dictionary, pos: Vector2, idx: int) -> void:
 	if c.get("at_door", false) and GameLayout.door_index(GameState.customers, c) > 0:
 		_draw_queue_chip(pos, c, radius)
 	else:
-		_draw_bubble(pos + Vector2(radius + 16, -radius), c)
+		_draw_bubble(pos + Vector2(radius + 16, -radius), c, bubble_ofs)
 
 
 ## 排队小徽章：只显示菜品图标（秒数挂在耐心条右端，避免三层叠压）。
@@ -294,8 +314,8 @@ func _draw_queue_chip(pos: Vector2, c: Dictionary, radius: float) -> void:
 	_draw_food(chip.position + Vector2(15, 12), 8, c["recipe_id"])
 
 
-## 点单气泡：米白圆角卡片 + 投影 + 小尾巴 + 食物图标框。
-func _draw_bubble(pos: Vector2, c: Dictionary) -> void:
+## 气泡完整文本（内容随状态变化）。
+func _bubble_text(c: Dictionary) -> String:
 	var progress := ""
 	if c["state"] == "dining":
 		progress = tr("（好吃！）")
@@ -313,9 +333,19 @@ func _draw_bubble(pos: Vector2, c: Dictionary) -> void:
 				progress = tr("（点我取走）")
 	elif c["state"] == "ready":
 		progress = tr("（点我上菜）")
-	var text: String = tr(c["recipe_name"]) + progress
+	return tr(c["recipe_name"]) + progress
 
-	var bw: float = maxf(150.0, font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x + 52.0)
+
+## 气泡宽度（与 _draw_bubble 口径一致，供防重叠布局用）。
+func _bubble_width(c: Dictionary) -> float:
+	return maxf(150.0, font.get_string_size(_bubble_text(c), HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x + 52.0)
+
+
+## 点单气泡：米白圆角卡片 + 投影 + 小尾巴 + 食物图标框。
+func _draw_bubble(pos: Vector2, c: Dictionary, extra_ofs: Vector2 = Vector2.ZERO) -> void:
+	pos += extra_ofs
+	var text: String = _bubble_text(c)
+	var bw: float = _bubble_width(c)
 	var bh := 38.0
 	# 小尾巴（指向顾客）
 	draw_colored_polygon(PackedVector2Array([

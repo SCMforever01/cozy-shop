@@ -19,7 +19,7 @@ func _draw() -> void:
 		x = _seg(x, tr(" 明日:%s") % tr(Catalog.get_weather()[GameState.forecast_weather_id].display_name), Color(0.62, 0.70, 0.86))
 	x = _seg(x, "¥%d" % GameState.shop["money"], UITheme.GOLD)
 	x = _seg(x, tr("食材") + " %d" % GameState.shop["ingredients"], Color(0.95, 0.90, 0.78))
-	_seg(x, _state_text(GameState.shop["day_state"]), UITheme.ACCENT.lightened(0.2))
+	x = _seg(x, _state_text(GameState.shop["day_state"]), UITheme.ACCENT.lightened(0.2))
 	_draw_bar(Vector2(16, 56), 170, GameState.shop["hygiene"], tr("卫生"))
 	_draw_bar(Vector2(280, 56), 170, GameState.shop["environment"], tr("环境"))
 	# 熟客状态：按信息行实际宽度摆放（长文案时不重叠），且不出右边界
