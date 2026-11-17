@@ -7,6 +7,19 @@ extends UIView
 ## 由主场景注入：要读工位实时状态。
 var kitchen: KitchenSystem
 var _icons: Dictionary = {}
+var _flash: Dictionary = {}  # station_idx -> 剩余高亮时间（秒）
+
+
+## 键盘 1~4 按下时高亮对应工位卡（可见反馈）。
+func flash_station(i: int) -> void:
+	_flash[i] = 0.45
+
+
+func _animate(delta: float) -> void:
+	for k in _flash.keys():
+		_flash[k] -= delta
+		if _flash[k] <= 0.0:
+			_flash.erase(k)
 
 
 func _draw() -> void:
@@ -33,6 +46,10 @@ func _draw_station(s: Dictionary, pos: Vector2) -> void:
 			glow = Color(0.95, 0.55, 0.25, 0.18)
 	if glow.a > 0.0:
 		UITheme.panel(self, rect.grow(7), glow, 18)
+	# 键盘高亮（按 1~4 时闪烁）
+	if _flash.has(s["id"]):
+		var fa: float = clampf(_flash[s["id"]] / 0.45, 0.0, 1.0)
+		UITheme.panel(self, rect.grow(6), Color(1.0, 0.92, 0.55, 0.35 * fa), 18)
 	# 玻璃卡片：深棕 + 亮边 + 投影
 	UITheme.panel(self, rect, Color(0.19, 0.15, 0.14, 0.93), 14, Color(1, 1, 1, 0.12), 1, 8, Vector2(0, 4))
 	UITheme.label(self, font, rect.position + Vector2(12, 24), tr(s["name"]), 15, Color(1.0, 0.93, 0.82))

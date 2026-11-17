@@ -19,6 +19,7 @@ var _controls_view: ControlsView
 var _fx_view: FxView
 var _tutorial_view: TutorialView
 var _audio: AudioController
+var _kitchen_view: KitchenView
 
 
 func _ready() -> void:
@@ -65,20 +66,20 @@ func _register_systems() -> void:
 func _build_views() -> void:
 	var shop_view := ShopView.new()
 	var hud_view := HudView.new()
-	var kitchen_view := KitchenView.new()
+	_kitchen_view = KitchenView.new()
 	_controls_view = ControlsView.new()
 	_fx_view = FxView.new()
 	_tutorial_view = TutorialView.new()
 	_audio = AudioController.new()
 
-	kitchen_view.kitchen = _kitchen_system
+	_kitchen_view.kitchen = _kitchen_system
 	_controls_view.language_system = _language_system
 	_controls_view.hygiene = _hygiene_system
 	_controls_view.audio = _audio
 	_audio.kitchen = _kitchen_system
 
 	# 绘制顺序 = 添加顺序：店铺 → HUD → 厨房 → 按钮 → 特效 → 引导遮罩（音频无渲染）
-	for v in [shop_view, hud_view, kitchen_view, _controls_view, _fx_view, _tutorial_view, _audio]:
+	for v in [shop_view, hud_view, _kitchen_view, _controls_view, _fx_view, _tutorial_view, _audio]:
 		add_child(v)
 
 
@@ -94,6 +95,10 @@ func _input(event: InputEvent) -> void:
 # ---------- 键盘（比点击快，高频操作全覆盖） ----------
 
 func _handle_key(keycode: Key) -> void:
+	# 日结面板期间：任意键 = 继续
+	if _fx_view.is_summary_active():
+		_fx_view.dismiss_summary()
+		return
 	match keycode:
 		KEY_ESCAPE:
 			if _tutorial_view.is_active():
@@ -106,6 +111,7 @@ func _handle_key(keycode: Key) -> void:
 			if i < _kitchen_system.stations.size():
 				_audio.play_sfx("tap", -10.0)
 				_fx_view.spawn_tap(GameLayout.station_pos(i))
+				_kitchen_view.flash_station(i)
 				var s: Dictionary = _kitchen_system.stations[i]
 				if s["customer_id"] >= 0:
 					_kitchen_system.tap_dish(s["customer_id"])
@@ -161,6 +167,10 @@ func _triage_action() -> void:
 
 
 func _handle_click(pos: Vector2) -> void:
+	# 日结面板期间：任意点击 = 继续
+	if _fx_view.is_summary_active():
+		_fx_view.dismiss_summary()
+		return
 	_audio.play_sfx("tap", -10.0)
 	_fx_view.spawn_tap(pos)
 

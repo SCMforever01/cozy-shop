@@ -298,7 +298,7 @@ func _draw_customer(c: Dictionary, pos: Vector2, idx: int, bubble_ofs: Vector2 =
 
 	# 门口等座倒计时：秒数徽章挂在耐心条右端（跟条走，最紧急信息最显眼）
 	if c.get("at_door", false):
-		UITheme.badge(self, Rect2(pos + Vector2(radius + 4, bar_dy - 3), Vector2(34, 15)), "%ds" % ceili(c["door_timer"]), font, Color(0.45, 0.32, 0.10, 0.92), UITheme.GOLD, 11)
+		UITheme.badge(self, Rect2(pos + Vector2(radius + 4, bar_dy - 3 + (idx % 2) * 10.0), Vector2(34, 15)), "%ds" % ceili(c["door_timer"]), font, Color(0.45, 0.32, 0.10, 0.92), UITheme.GOLD, 11)
 
 	# 点单气泡：队首完整显示，其余排队客人收成小徽章（避免人塔气泡互叠）
 	if c.get("at_door", false) and GameLayout.door_index(GameState.customers, c) > 0:

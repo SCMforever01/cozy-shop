@@ -32,6 +32,9 @@ const FLOATER_LIFETIME := 1.2
 
 var _floaters: Array = []  # {text, pos, age, color}
 var _taps: Array = []      # 点击反馈：{pos, age} 扩散圆环
+var _summary: Dictionary = {}   # 日结面板：{day, earned, served, burnt, angry, spoiled, age}
+var _day_stats := {"served": 0, "burnt": 0, "angry": 0, "spoiled": 0}
+var _warned_closing: bool = false
 var _bound: Array = []     # {event, callable}，退出时取消订阅用
 
 
@@ -44,6 +47,14 @@ func _ready() -> void:
 	EventBus.subscribe("customer.entered", _on_customer_entered)
 	EventBus.subscribe("season.changed", _on_season_changed)
 	EventBus.subscribe("kitchen.blocked", _on_kitchen_blocked)
+	EventBus.subscribe("day.summary", _on_day_summary)
+	# 日结面板统计
+	EventBus.subscribe("customer.served", func(_p): _day_stats["served"] += 1)
+	EventBus.subscribe("kitchen.burnt", func(_p): _day_stats["burnt"] += 1)
+	EventBus.subscribe("customer.left_angry", func(_p): _day_stats["angry"] += 1)
+	EventBus.subscribe("customer.left_no_seat", func(_p): _day_stats["angry"] += 1)
+	EventBus.subscribe("ingredients.spoiled", func(_p): _day_stats["spoiled"] += 1)
+	EventBus.subscribe("clock.tick", _on_tick)
 
 
 func _exit_tree() -> void:
@@ -64,6 +75,41 @@ func spawn_tap(pos: Vector2) -> void:
 func spawn_floater(text: String, color: Color) -> void:
 	print(text)
 	_floaters.append({"text": text, "pos": Vector2(GameLayout.W * 0.5, GameLayout.H * 0.45), "age": 0.0, "color": color})
+
+
+## 日结面板是否显示中（输入层据此把点击/按键当"继续"）。
+func is_summary_active() -> bool:
+	return not _summary.is_empty()
+
+
+## 水平居中画一行文本（宽卡片内居中，避免长行溢出）。
+func _center_text(y: float, text: String, size: int, color: Color) -> void:
+	var tw: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	UITheme.label(self, font, Vector2(GameLayout.W * 0.5 - tw / 2.0, y), text, size, color)
+
+
+## 关闭日结面板（点击/按键继续）。
+func dismiss_summary() -> void:
+	_summary = {}
+
+
+## 日结面板卡片（居中弹窗，停留至点击/按键继续）。
+func _draw_summary_panel() -> void:
+	if _summary.is_empty():
+		return
+	var cx := GameLayout.W * 0.5
+	var cy := GameLayout.H * 0.42
+	var w := 440.0
+	var h := 190.0
+	var alpha: float = clampf(_summary["age"] * 4.0, 0.0, 1.0)
+	UITheme.panel(self, Rect2(cx - w / 2 - 6, cy - h / 2 - 6, w + 12, h + 12), Color(0, 0, 0, 0.35 * alpha), 18)
+	UITheme.panel(self, Rect2(cx - w / 2, cy - h / 2, w, h), Color(0.98, 0.94, 0.86, 0.97 * alpha), 16, Color(0.35, 0.25, 0.16, 0.5), 2)
+	var earned: int = _summary["earned"]
+	_center_text(cy - h / 2 + 36, tr("第 %d 天 · 营业结算") % _summary["day"], 22, UITheme.INK)
+	_center_text(cy - 18, tr("营收 ¥%d") % earned, 26, UITheme.GREEN if earned >= 0 else UITheme.RED)
+	_center_text(cy + 22, tr("服务 %d 单 · 糊锅 %d 次 · 气走/流失 %d 位") % [_summary["served"], _summary["burnt"], _summary["angry"]], 16, UITheme.INK_SOFT)
+	_center_text(cy + 52, tr("食材浪费 %d 份 · 口碑 %d") % [_summary["spoiled"], GameState.shop["reputation"]], 16, UITheme.INK_SOFT)
+	_center_text(cy + 82, tr("点击 / 按任意键继续"), 14, Color(0.55, 0.48, 0.40))
 
 
 # ---------- 数据表驱动的提示 ----------
@@ -101,8 +147,24 @@ func _on_customer_entered(p) -> void:
 			spawn_floater(tr("%s来了！") % tr(p["name"]), Color(1.0, 0.85, 0.4))
 
 
+## 日结面板：把当天成果摆到脸上（营收/服务/糊锅/气走/浪费）。
+func _on_day_summary(p) -> void:
+	_summary = {"day": p["day"], "earned": p["earned"], "age": 0.0,
+		"served": _day_stats["served"], "burnt": _day_stats["burnt"],
+		"angry": _day_stats["angry"], "spoiled": _day_stats["spoiled"]}
+	_day_stats = {"served": 0, "burnt": 0, "angry": 0, "spoiled": 0}
+	_warned_closing = false
+
+
 func _on_season_changed(season) -> void:
 	spawn_floater(tr("进入%s天") % tr(Catalog.get_season_name(season)), Color(0.7, 0.8, 1.0))
+
+
+## 打烊预警：最后 10 分钟提示一次（防"直接跨日"惊吓）。
+func _on_tick(minute) -> void:
+	if not _warned_closing and int(minute) >= GameClock.minutes_per_day - 10:
+		_warned_closing = true
+		spawn_floater(tr("快打烊了！还有 10 分钟"), Color(1.0, 0.8, 0.4))
 
 
 func _on_kitchen_blocked(p) -> void:
@@ -120,9 +182,12 @@ func _animate(delta: float) -> void:
 	for t in _taps:
 		t["age"] += delta
 	_taps = _taps.filter(func(t): return t["age"] < 0.35)
+	if not _summary.is_empty():
+		_summary["age"] += delta
 
 
 func _draw() -> void:
+	_draw_summary_panel()
 	# 点击涟漪（扩散圆环）
 	for t in _taps:
 		var k: float = t["age"] / 0.35

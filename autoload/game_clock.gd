@@ -7,8 +7,9 @@ extends Node
 ## 之后的每天由 _end_day() 触发。
 
 ## 每个游戏内分钟对应的真实秒数。
-## 2.0 = 营业日约 2 分钟真实时间：与真实秒计的烹饪节奏匹配（1.0 时一天 60 秒根本服务不过来）。
-var seconds_per_minute: float = 2.0
+## 3.0 = 营业日约 3 分钟真实时间（评审反馈 2 分钟太慌、单子死在锅里跨天蒸发）：
+## 烹饪链 2~3 步 × 真实秒计时，需要给休闲玩家留出完成一单的余量。
+var seconds_per_minute: float = 3.0
 ## 每天营业的游戏内分钟数（默认 60 分钟 = 1 小时，约 1 分钟真实时间）。
 var minutes_per_day: int = 60
 
@@ -24,6 +25,9 @@ var _accumulated: float = 0.0
 
 func _process(delta: float) -> void:
 	if is_paused:
+		return
+	# 只有营业中才走游戏时间：准备/打烊阶段看菜单、逛商店不烧天数
+	if GameState.shop["day_state"] != "serving":
 		return
 	_accumulated += delta * speed_multiplier
 	while _accumulated >= seconds_per_minute:
