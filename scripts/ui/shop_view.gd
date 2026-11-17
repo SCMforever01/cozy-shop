@@ -357,8 +357,10 @@ func _bubble_text(c: Dictionary) -> String:
 
 
 ## 气泡宽度（与 _draw_bubble 口径一致，供防重叠布局用）。
+## 可操作气泡额外预留「空格」键帽宽度，文字不被键帽压住。
 func _bubble_width(c: Dictionary) -> float:
-	return maxf(150.0, font.get_string_size(_bubble_text(c), HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x + 52.0)
+	var extra: float = 44.0 if _is_actionable(c) else 0.0
+	return maxf(150.0, font.get_string_size(_bubble_text(c), HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x + 52.0) + extra
 
 
 ## 点单气泡：米白圆角卡片 + 投影 + 小尾巴 + 食物图标框。
@@ -378,9 +380,10 @@ func _draw_bubble(pos: Vector2, c: Dictionary, extra_ofs: Vector2 = Vector2.ZERO
 	UITheme.label(self, font, pos + Vector2(42, 25), text, 15, UITheme.INK)
 	# 可操作气泡带按键提示（空格=分诊键，一键代劳）
 	if _is_actionable(c):
-		var cap := Rect2(pos + Vector2(bw - 46, bh + 2), Vector2(42, 17))
+		# 键帽在气泡内右缘（不与外部名牌/倒计时挤叠）
+		var cap := Rect2(pos + Vector2(bw - 44, 10), Vector2(38, 18))
 		UITheme.panel(self, cap, Color(0.28, 0.23, 0.20, 0.92), 5, Color(1, 1, 1, 0.18), 1)
-		UITheme.label(self, font, cap.position + Vector2(6, 13), tr("空格"), 11, Color(0.95, 0.90, 0.78))
+		UITheme.label(self, font, cap.position + Vector2(5, 13), tr("空格"), 11, Color(0.95, 0.90, 0.78))
 
 
 ## 气泡是否对应可按空格推进的操作。

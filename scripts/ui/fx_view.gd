@@ -88,12 +88,13 @@ func _on_customer_served(p) -> void:
 ## pos 省略时落在屏幕中央（槽位错开，同屏多条上下分层不压字）。
 func spawn_floater(text: String, color: Color, pos: Variant = null) -> void:
 	print(text)
-	var base: Vector2 = Vector2(GameLayout.W * 0.5, GameLayout.H * 0.45) if pos == null else pos
+	var base: Vector2 = Vector2(GameLayout.W * 0.5, GameLayout.H * 0.32) if pos == null else pos
 	var slot := 0
 	for f in _floaters:
 		if f["slot"] == slot:
 			slot += 1
-	_floaters.append({"text": text, "pos": base + Vector2(0, -slot * 46.0), "age": 0.0, "color": color, "slot": slot})
+	_floaters.append({"text": text, "pos": base + Vector2(0, -slot * 46.0), "age": 0.0, "color": color, "slot": slot,
+		"heavy": text.begins_with("+¥")})
 
 
 ## 日结面板是否显示中（输入层据此把点击/按键当"继续"）。
@@ -107,7 +108,7 @@ func _center_text(y: float, text: String, size: int, color: Color) -> void:
 	UITheme.label(self, font, Vector2(GameLayout.W * 0.5 - tw / 2.0, y), text, size, color)
 
 
-## 关闭日结面板（点击/按键继续）。
+## 关闭日结面板。空格不响应——空格是高频连打键，防自动打烊时误关漏看结算。
 func dismiss_summary() -> void:
 	_summary = {}
 
@@ -199,7 +200,7 @@ func _animate(delta: float) -> void:
 	for f in _floaters:
 		f["age"] += delta
 		f["pos"].y -= 45.0 * delta
-	_floaters = _floaters.filter(func(f): return f["age"] < FLOATER_LIFETIME)
+	_floaters = _floaters.filter(func(f): return f["age"] < (2.2 if f.get("heavy", false) else FLOATER_LIFETIME))
 	for t in _taps:
 		t["age"] += delta
 	_taps = _taps.filter(func(t): return t["age"] < 0.35)
@@ -215,13 +216,16 @@ func _draw() -> void:
 		var r: float = 10.0 + 26.0 * k
 		draw_arc(t["pos"], r, 0, TAU, 24, Color(1, 1, 1, 0.55 * (1.0 - k)), 2.5)
 	for f in _floaters:
-		var alpha := clampf(1.0 - f["age"] / FLOATER_LIFETIME, 0.0, 1.0)
+		var heavy: bool = f.get("heavy", false)
+		var life: float = 2.2 if heavy else FLOATER_LIFETIME
+		var size: int = 28 if heavy else 24
+		var alpha := clampf(1.0 - f["age"] / life, 0.0, 1.0)
 		var c: Color = f["color"]
 		c.a = alpha
-		# 出现瞬间弹一下（scale 1.25 -> 1.0）；奶油底板保证任何背景上可读
-		var pop := 1.0 + 0.25 * maxf(0.0, 1.0 - f["age"] / 0.18)
-		var tw: float = font.get_string_size(f["text"], HORIZONTAL_ALIGNMENT_LEFT, -1, 24).x + 26.0
+		# 出现弹跳（重飘字更大弹）；奶油底板保证任何背景上可读
+		var pop := 1.0 + (0.5 if heavy else 0.25) * maxf(0.0, 1.0 - f["age"] / 0.18)
+		var tw: float = font.get_string_size(f["text"], HORIZONTAL_ALIGNMENT_LEFT, -1, size).x + 26.0
 		draw_set_transform(f["pos"], 0.0, Vector2(pop, pop))
-		UITheme.panel(self, Rect2(Vector2(-tw / 2.0, -22.0), Vector2(tw, 34.0)), Color(0.98, 0.94, 0.86, 0.92 * alpha), 9, Color(0.3, 0.22, 0.14, 0.5), 1)
-		UITheme.label(self, font, Vector2.ZERO, f["text"], 24, c, HORIZONTAL_ALIGNMENT_CENTER)
+		UITheme.panel(self, Rect2(Vector2(-tw / 2.0, -24.0), Vector2(tw, 38.0)), Color(0.98, 0.94, 0.86, 0.94 * alpha), 9, Color(0.3, 0.22, 0.14, 0.55), 1)
+		UITheme.label(self, font, Vector2.ZERO, f["text"], size, c, HORIZONTAL_ALIGNMENT_CENTER)
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)

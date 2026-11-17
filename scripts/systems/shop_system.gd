@@ -18,6 +18,8 @@ func teardown() -> void:
 
 func _on_day_started(_day) -> void:
 	GameState.shop["day_state"] = "preparing"
+	# 街坊口碑自然回暖 +1/天：低谷有救济，防死亡螺旋（服务 +1/单仍是主增长）
+	GameState.shop["reputation"] += 1
 	GameState.shop["hygiene"] = 100.0
 	GameState.shop["holiday"] = false
 	_day_start_money = GameState.shop["money"]

@@ -110,4 +110,4 @@ func _draw_waiting_dish(c: Dictionary, pos: Vector2) -> void:
 					target = tr("灶台")
 				"plate":
 					target = tr("装盘")
-		UITheme.badge(self, Rect2(pos + Vector2(-36, 28), Vector2(72, 18)), tr("→%s") % target, font, Color(0.42, 0.36, 0.30), Color(1, 0.95, 0.85), 12)
+		UITheme.badge(self, Rect2(pos + Vector2(-88, -9), Vector2(72, 18)), tr("→%s") % target, font, Color(0.42, 0.36, 0.30), Color(1, 0.95, 0.85), 12)

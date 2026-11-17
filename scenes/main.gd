@@ -95,9 +95,10 @@ func _input(event: InputEvent) -> void:
 # ---------- 键盘（比点击快，高频操作全覆盖） ----------
 
 func _handle_key(keycode: Key) -> void:
-	# 日结面板期间：任意键 = 继续
+	# 日结面板期间：除空格（高频连打防误关）外任意键 = 继续
 	if _fx_view.is_summary_active():
-		_fx_view.dismiss_summary()
+		if keycode != KEY_SPACE:
+			_fx_view.dismiss_summary()
 		return
 	match keycode:
 		KEY_ESCAPE:
